@@ -1,0 +1,7 @@
+AGENTS.md
+.dart_tool/
+.idea/
+build/
+example/.dart_tool/
+example/.idea/
+example/build/

@@ -1,0 +1,26 @@
+name: wiggly_loaders
+description: A collection of smooth, customizable wiggly/wavy loading indicators for Flutter — circular loader, linear progress bar, and pull-to-refresh indicator.
+version: 0.1.0
+homepage: https://github.com/Danis96/wiggly_loaders
+repository: https://github.com/Danis96/wiggly_loaders
+issue_tracker: https://github.com/Danis96/wiggly_loaders/issues
+topics:
+  - loading
+  - progress-indicator
+  - animation
+  - ui
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
