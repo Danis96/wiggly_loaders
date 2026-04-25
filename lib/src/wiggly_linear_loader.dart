@@ -29,6 +29,7 @@ class WigglyLinearLoader extends StatefulWidget {
     this.slideDuration = const Duration(milliseconds: 1400),
     this.segmentFraction = 0.45,
     this.borderRadius = 99.0,
+    this.willAnimate = true,
   })  : _progress = progress,
         _indeterminate = false,
         assert(
@@ -48,6 +49,7 @@ class WigglyLinearLoader extends StatefulWidget {
     Duration slideDuration = const Duration(milliseconds: 1400),
     double segmentFraction = 0.45,
     double borderRadius = 99.0,
+    bool willAnimate = true,
   }) : this._(
           key: key,
           progress: 0.0,
@@ -61,6 +63,7 @@ class WigglyLinearLoader extends StatefulWidget {
           slideDuration: slideDuration,
           segmentFraction: segmentFraction,
           borderRadius: borderRadius,
+          willAnimate: willAnimate,
         );
 
   const WigglyLinearLoader._({
@@ -76,6 +79,7 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.slideDuration,
     required this.segmentFraction,
     required this.borderRadius,
+    required this.willAnimate,
   })  : _progress = progress,
         _indeterminate = indeterminate;
 
@@ -109,6 +113,9 @@ class WigglyLinearLoader extends StatefulWidget {
   /// Border radius of the track background. Defaults to fully rounded (pill).
   final double borderRadius;
 
+  /// Whether to play an intro animation when the widget is shown.
+  final bool willAnimate;
+
   @override
   State<WigglyLinearLoader> createState() => _WigglyLinearLoaderState();
 }
@@ -119,6 +126,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   late final AnimationController _slideController;
   late final Animation<double> _phaseAnim;
   late Animation<double> _slideAnim;
+  late final AnimationController _entryController;
+  late final Animation<double> _entryAnim;
 
   @override
   void initState() {
@@ -140,7 +149,25 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
     _slideAnim = _buildSlideAnimation();
 
-    if (widget._indeterminate) {
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )
+      ..addListener(_handleEntryTick)
+      ..addStatusListener(_handleEntryStatus);
+
+    _entryAnim = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.easeOutCubic,
+    );
+
+    if (widget.willAnimate) {
+      _entryController.forward(from: 0.0);
+    } else {
+      _entryController.value = 1.0;
+    }
+
+    if (widget._indeterminate && !widget.willAnimate) {
       _slideController.repeat();
     }
   }
@@ -154,9 +181,35 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     );
   }
 
+  void _handleEntryTick() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _handleEntryStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && widget._indeterminate) {
+      _slideController.repeat();
+    }
+  }
+
   @override
   void didUpdateWidget(covariant WigglyLinearLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.willAnimate != widget.willAnimate) {
+      if (widget.willAnimate) {
+        _slideController
+          ..stop()
+          ..reset();
+        _entryController.forward(from: 0.0);
+      } else {
+        _entryController.value = 1.0;
+        if (widget._indeterminate) {
+          _slideController.repeat();
+        }
+      }
+    }
 
     if (oldWidget.wiggleDuration != widget.wiggleDuration) {
       _wiggleController.duration = widget.wiggleDuration;
@@ -167,7 +220,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
     if (oldWidget.slideDuration != widget.slideDuration) {
       _slideController.duration = widget.slideDuration;
-      if (widget._indeterminate) {
+      if (widget._indeterminate &&
+          (!widget.willAnimate || _entryController.isCompleted)) {
         _slideController.repeat();
       }
     }
@@ -177,7 +231,13 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       _slideAnim = _buildSlideAnimation();
 
       if (widget._indeterminate) {
-        _slideController.repeat();
+        if (widget.willAnimate && !_entryController.isCompleted) {
+          _slideController
+            ..stop()
+            ..reset();
+        } else {
+          _slideController.repeat();
+        }
       } else {
         _slideController
           ..stop()
@@ -190,16 +250,26 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   void dispose() {
     _wiggleController.dispose();
     _slideController.dispose();
+    _entryController
+      ..removeListener(_handleEntryTick)
+      ..removeStatusListener(_handleEntryStatus)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
+    final showIndeterminateIntro = widget._indeterminate &&
+        widget.willAnimate &&
+        !_entryController.isCompleted;
+
     return WigglyLinearCanvas(
       height: widget.height,
       wiggleAmplitude: widget.wiggleAmplitude,
-      progress: widget._progress,
-      indeterminate: widget._indeterminate,
+      progress:
+          showIndeterminateIntro ? entryValue : widget._progress * entryValue,
+      indeterminate: widget._indeterminate && !showIndeterminateIntro,
       phase: _phaseAnim,
       slideOffset: _slideAnim,
       wiggleCount: widget.wiggleCount,

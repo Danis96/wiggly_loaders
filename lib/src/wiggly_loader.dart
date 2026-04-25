@@ -29,6 +29,7 @@ class WigglyLoader extends StatefulWidget {
     this.wiggleDuration = const Duration(milliseconds: 1200),
     this.rotateDuration = const Duration(milliseconds: 1600),
     this.arcSpan = 0.7,
+    this.willAnimate = true,
     this.child,
   })  : _progress = progress,
         _indeterminate = false,
@@ -49,6 +50,7 @@ class WigglyLoader extends StatefulWidget {
     Duration wiggleDuration = const Duration(milliseconds: 1200),
     Duration rotateDuration = const Duration(milliseconds: 1600),
     double arcSpan = 0.7,
+    bool willAnimate = true,
     Widget? child,
   }) : this._(
           key: key,
@@ -63,6 +65,7 @@ class WigglyLoader extends StatefulWidget {
           wiggleDuration: wiggleDuration,
           rotateDuration: rotateDuration,
           arcSpan: arcSpan,
+          willAnimate: willAnimate,
           child: child,
         );
 
@@ -79,6 +82,7 @@ class WigglyLoader extends StatefulWidget {
     required this.wiggleDuration,
     required this.rotateDuration,
     required this.arcSpan,
+    required this.willAnimate,
     required this.child,
   })  : _progress = progress,
         _indeterminate = indeterminate;
@@ -114,6 +118,9 @@ class WigglyLoader extends StatefulWidget {
   /// Ignored in determinate mode.
   final double arcSpan;
 
+  /// Whether to play an intro animation when the widget is shown.
+  final bool willAnimate;
+
   /// Optional widget to display in the center of the loader.
   final Widget? child;
 
@@ -127,6 +134,8 @@ class _WigglyLoaderState extends State<WigglyLoader>
   late final AnimationController _rotateController;
   late final Animation<double> _phaseAnim;
   late final Animation<double> _rotateAnim;
+  late final AnimationController _entryController;
+  late final Animation<double> _entryAnim;
 
   @override
   void initState() {
@@ -150,7 +159,37 @@ class _WigglyLoaderState extends State<WigglyLoader>
       CurvedAnimation(parent: _rotateController, curve: Curves.linear),
     );
 
-    if (widget._indeterminate) {
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )
+      ..addListener(_handleEntryTick)
+      ..addStatusListener(_handleEntryStatus);
+
+    _entryAnim = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.easeOutCubic,
+    );
+
+    if (widget.willAnimate) {
+      _entryController.forward(from: 0.0);
+    } else {
+      _entryController.value = 1.0;
+    }
+
+    if (widget._indeterminate && !widget.willAnimate) {
+      _rotateController.repeat();
+    }
+  }
+
+  void _handleEntryTick() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _handleEntryStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && widget._indeterminate) {
       _rotateController.repeat();
     }
   }
@@ -158,6 +197,20 @@ class _WigglyLoaderState extends State<WigglyLoader>
   @override
   void didUpdateWidget(covariant WigglyLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.willAnimate != widget.willAnimate) {
+      if (widget.willAnimate) {
+        _rotateController
+          ..stop()
+          ..reset();
+        _entryController.forward(from: 0.0);
+      } else {
+        _entryController.value = 1.0;
+        if (widget._indeterminate) {
+          _rotateController.repeat();
+        }
+      }
+    }
 
     if (oldWidget.wiggleDuration != widget.wiggleDuration) {
       _wiggleController.duration = widget.wiggleDuration;
@@ -168,14 +221,21 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
     if (oldWidget.rotateDuration != widget.rotateDuration) {
       _rotateController.duration = widget.rotateDuration;
-      if (widget._indeterminate) {
+      if (widget._indeterminate &&
+          (!widget.willAnimate || _entryController.isCompleted)) {
         _rotateController.repeat();
       }
     }
 
     if (oldWidget._indeterminate != widget._indeterminate) {
       if (widget._indeterminate) {
-        _rotateController.repeat();
+        if (widget.willAnimate && !_entryController.isCompleted) {
+          _rotateController
+            ..stop()
+            ..reset();
+        } else {
+          _rotateController.repeat();
+        }
       } else {
         _rotateController
           ..stop()
@@ -188,15 +248,25 @@ class _WigglyLoaderState extends State<WigglyLoader>
   void dispose() {
     _wiggleController.dispose();
     _rotateController.dispose();
+    _entryController
+      ..removeListener(_handleEntryTick)
+      ..removeStatusListener(_handleEntryStatus)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
+    final showIndeterminateIntro = widget._indeterminate &&
+        widget.willAnimate &&
+        !_entryController.isCompleted;
+
     return WigglyArcCanvas(
       size: widget.size,
-      progress: widget._progress,
-      indeterminate: widget._indeterminate,
+      progress:
+          showIndeterminateIntro ? entryValue : widget._progress * entryValue,
+      indeterminate: widget._indeterminate && !showIndeterminateIntro,
       phase: _phaseAnim,
       rotation: _rotateAnim,
       strokeWidth: widget.strokeWidth,

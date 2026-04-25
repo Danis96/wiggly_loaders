@@ -148,6 +148,7 @@ flutter run -d ios
 | `wiggleDuration`  | `1200ms`            | Wiggle animation speed                           |
 | `rotateDuration`  | `1600ms` / `1500ms` | Spin speed                                       |
 | `arcSpan`         | `0.7`               | Fraction of circle used by indeterminate arc     |
+| `willAnimate`     | `true`              | Intro animation when widget appears              |
 
 ### WigglyLoader only
 
@@ -169,6 +170,7 @@ flutter run -d ios
 | `slideDuration`   | `1400ms`   | Indeterminate slide speed                        |
 | `segmentFraction` | `0.45`     | Width of sliding segment                         |
 | `borderRadius`    | `99.0`     | Track corner radius                              |
+| `willAnimate`     | `true`     | Intro animation when widget appears              |
 
 ### WigglyRefreshIndicator only
 
@@ -183,6 +185,7 @@ flutter run -d ios
 ## Behavior notes
 
 - Determinate constructors assert `progress` stays inside `0.0..1.0`
+- With `willAnimate: true`, loaders animate in from `0` each time mounted
 - `WigglyLinearLoader` keeps wave phase anchored to full width so pattern does not jump while segment slides
 - `WigglyRefreshIndicator` switches from pull progress to indeterminate spin until `onRefresh` completes
 - Duration props update correctly on rebuilds

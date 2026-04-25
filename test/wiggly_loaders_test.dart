@@ -81,6 +81,24 @@ void main() {
       expect(find.byType(WigglyLoader), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('accepts willAnimate false', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                progress: 0.5,
+                willAnimate: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final widget = tester.widget<WigglyLoader>(find.byType(WigglyLoader));
+      expect(widget.willAnimate, isFalse);
+    });
   });
 
   group('WigglyLinearLoader', () {
@@ -150,6 +168,26 @@ void main() {
 
       expect(find.byType(WigglyLinearLoader), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('accepts willAnimate false', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLinearLoader(
+                progress: 0.75,
+                willAnimate: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final widget = tester.widget<WigglyLinearLoader>(
+        find.byType(WigglyLinearLoader),
+      );
+      expect(widget.willAnimate, isFalse);
     });
   });
 
