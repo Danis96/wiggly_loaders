@@ -1,4 +1,4 @@
-## 0.1.1
+## 0.2.0
 
 * Add `willAnimate` (default `true`) to `WigglyLoader` and `WigglyLinearLoader`
 * Add mount intro animation: determinate `0 -> progress`, indeterminate intro `0 -> 100%` then loop
