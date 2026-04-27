@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'internal/wiggly_defaults.dart';
 import 'internal/wiggly_arc_canvas.dart';
+import 'wiggly_loaders_theme.dart';
 
 /// A customizable wiggly/wavy circular loading indicator.
 ///
@@ -24,13 +26,15 @@ class WigglyLoader extends StatefulWidget {
     this.strokeWidth = 4.5,
     this.wiggleCount = 14,
     this.wiggleAmplitude = 3.5,
-    this.progressColor = const Color(0xFF3B82F6),
-    this.trackColor = const Color(0xFFE5E7EB),
+    this.progressColor = WigglyDefaults.loaderProgressColor,
+    this.trackColor = WigglyDefaults.loaderTrackColor,
     this.wiggleDuration = const Duration(milliseconds: 1200),
     this.rotateDuration = const Duration(milliseconds: 1600),
     this.arcSpan = 0.7,
     this.willAnimate = true,
     this.child,
+    this.semanticsLabel,
+    this.semanticsValue,
   })  : _progress = progress,
         _indeterminate = false,
         assert(
@@ -45,13 +49,15 @@ class WigglyLoader extends StatefulWidget {
     double strokeWidth = 4.5,
     int wiggleCount = 14,
     double wiggleAmplitude = 3.5,
-    Color progressColor = const Color(0xFF3B82F6),
-    Color trackColor = const Color(0xFFE5E7EB),
+    Color progressColor = WigglyDefaults.loaderProgressColor,
+    Color trackColor = WigglyDefaults.loaderTrackColor,
     Duration wiggleDuration = const Duration(milliseconds: 1200),
     Duration rotateDuration = const Duration(milliseconds: 1600),
     double arcSpan = 0.7,
     bool willAnimate = true,
     Widget? child,
+    String? semanticsLabel,
+    String? semanticsValue,
   }) : this._(
           key: key,
           progress: 0.0,
@@ -67,6 +73,8 @@ class WigglyLoader extends StatefulWidget {
           arcSpan: arcSpan,
           willAnimate: willAnimate,
           child: child,
+          semanticsLabel: semanticsLabel,
+          semanticsValue: semanticsValue,
         );
 
   const WigglyLoader._({
@@ -84,6 +92,8 @@ class WigglyLoader extends StatefulWidget {
     required this.arcSpan,
     required this.willAnimate,
     required this.child,
+    required this.semanticsLabel,
+    required this.semanticsValue,
   })  : _progress = progress,
         _indeterminate = indeterminate;
 
@@ -124,31 +134,43 @@ class WigglyLoader extends StatefulWidget {
   /// Optional widget to display in the center of the loader.
   final Widget? child;
 
+  /// Optional semantic label for assistive technologies.
+  final String? semanticsLabel;
+
+  /// Optional semantic value for assistive technologies.
+  final String? semanticsValue;
+
   @override
   State<WigglyLoader> createState() => _WigglyLoaderState();
 }
 
 class _WigglyLoaderState extends State<WigglyLoader>
     with TickerProviderStateMixin {
+  static const double _reducedMotionDurationScale = 1.8;
+  static const double _reducedMotionAmplitudeScale = 0.65;
+
   late final AnimationController _wiggleController;
   late final AnimationController _rotateController;
   late final Animation<double> _phaseAnim;
   late final Animation<double> _rotateAnim;
   late final AnimationController _entryController;
   late final Animation<double> _entryAnim;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
+    _reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
 
     _wiggleController = AnimationController(
       vsync: this,
-      duration: widget.wiggleDuration,
+      duration: _effectiveDuration(widget.wiggleDuration),
     )..repeat();
 
     _rotateController = AnimationController(
       vsync: this,
-      duration: widget.rotateDuration,
+      duration: _effectiveDuration(widget.rotateDuration),
     );
 
     _phaseAnim = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
@@ -161,7 +183,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 520),
+      duration: _effectiveDuration(const Duration(milliseconds: 520)),
     )
       ..addListener(_handleEntryTick)
       ..addStatusListener(_handleEntryStatus);
@@ -179,6 +201,18 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
     if (widget._indeterminate && !widget.willAnimate) {
       _rotateController.repeat();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+
+    if (_reduceMotion != nextReduceMotion) {
+      _reduceMotion = nextReduceMotion;
+      _applyEffectiveDurations();
     }
   }
 
@@ -212,19 +246,9 @@ class _WigglyLoaderState extends State<WigglyLoader>
       }
     }
 
-    if (oldWidget.wiggleDuration != widget.wiggleDuration) {
-      _wiggleController.duration = widget.wiggleDuration;
-      if (_wiggleController.isAnimating) {
-        _wiggleController.repeat();
-      }
-    }
-
-    if (oldWidget.rotateDuration != widget.rotateDuration) {
-      _rotateController.duration = widget.rotateDuration;
-      if (widget._indeterminate &&
-          (!widget.willAnimate || _entryController.isCompleted)) {
-        _rotateController.repeat();
-      }
+    if (oldWidget.wiggleDuration != widget.wiggleDuration ||
+        oldWidget.rotateDuration != widget.rotateDuration) {
+      _applyEffectiveDurations();
     }
 
     if (oldWidget._indeterminate != widget._indeterminate) {
@@ -257,25 +281,78 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
   @override
   Widget build(BuildContext context) {
+    final theme = WigglyLoadersTheme.maybeOf(context);
+    final resolvedProgressColor =
+        widget.progressColor == WigglyDefaults.loaderProgressColor
+            ? (theme?.loaderProgressColor ?? widget.progressColor)
+            : widget.progressColor;
+    final resolvedTrackColor = widget.trackColor == WigglyDefaults.loaderTrackColor
+        ? (theme?.loaderTrackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
         widget.willAnimate &&
         !_entryController.isCompleted;
+    final semanticsLabel = widget.semanticsLabel ??
+        (widget._indeterminate ? 'Loading' : 'Loading progress');
+    final semanticsValue = widget.semanticsValue ??
+        (widget._indeterminate
+            ? null
+            : '${(widget._progress * 100).round()} percent');
 
-    return WigglyArcCanvas(
-      size: widget.size,
-      progress:
-          showIndeterminateIntro ? entryValue : widget._progress * entryValue,
-      indeterminate: widget._indeterminate && !showIndeterminateIntro,
-      phase: _phaseAnim,
-      rotation: _rotateAnim,
-      strokeWidth: widget.strokeWidth,
-      wiggleCount: widget.wiggleCount,
-      wiggleAmplitude: widget.wiggleAmplitude,
-      progressColor: widget.progressColor,
-      trackColor: widget.trackColor,
-      arcSpan: widget.arcSpan,
-      child: widget.child,
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      value: semanticsValue,
+      child: WigglyArcCanvas(
+        size: widget.size,
+        progress:
+            showIndeterminateIntro ? entryValue : widget._progress * entryValue,
+        indeterminate: widget._indeterminate && !showIndeterminateIntro,
+        phase: _phaseAnim,
+        rotation: _rotateAnim,
+        strokeWidth: widget.strokeWidth,
+        wiggleCount: widget.wiggleCount,
+        wiggleAmplitude: resolvedWiggleAmplitude,
+        progressColor: resolvedProgressColor,
+        trackColor: resolvedTrackColor,
+        arcSpan: widget.arcSpan,
+        child: widget.child,
+      ),
     );
+  }
+
+  Duration _effectiveDuration(Duration duration) {
+    if (!_reduceMotion) {
+      return duration;
+    }
+
+    return Duration(
+      microseconds:
+          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+    );
+  }
+
+  double _effectiveAmplitude(double amplitude) {
+    if (!_reduceMotion) {
+      return amplitude;
+    }
+    return amplitude * _reducedMotionAmplitudeScale;
+  }
+
+  void _applyEffectiveDurations() {
+    _wiggleController.duration = _effectiveDuration(widget.wiggleDuration);
+    if (_wiggleController.isAnimating) {
+      _wiggleController.repeat();
+    }
+
+    _rotateController.duration = _effectiveDuration(widget.rotateDuration);
+    if (_rotateController.isAnimating) {
+      _rotateController.repeat();
+    }
+
+    _entryController.duration =
+        _effectiveDuration(const Duration(milliseconds: 520));
   }
 }

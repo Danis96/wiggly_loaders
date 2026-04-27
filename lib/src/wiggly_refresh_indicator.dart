@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'internal/wiggly_defaults.dart';
 import 'internal/wiggly_refresh_badge.dart';
+import 'wiggly_loaders_theme.dart';
 
 /// A pull-to-refresh indicator that shows a wiggly arc while pulling
 /// and spins indeterminately while the refresh future is in progress.
@@ -39,17 +41,21 @@ class WigglyRefreshIndicator extends StatefulWidget {
     required this.onRefresh,
     required this.child,
     this.displacement = 50.0,
+    this.triggerDistance = 80.0,
+    this.maxDragDistance = 120.0,
+    this.notificationPredicate = defaultScrollNotificationPredicate,
     this.size = 52.0,
     this.strokeWidth = 4.0,
     this.wiggleCount = 14,
     this.wiggleAmplitude = 3.5,
-    this.progressColor = const Color(0xFF3B89F6),
-    this.trackColor = const Color(0xFFE5E7EB),
-    this.backgroundColor = Colors.white,
+    this.progressColor = WigglyDefaults.refreshProgressColor,
+    this.trackColor = WigglyDefaults.refreshTrackColor,
+    this.backgroundColor = WigglyDefaults.refreshBackgroundColor,
     this.wiggleDuration = const Duration(milliseconds: 1200),
     this.rotateDuration = const Duration(milliseconds: 1500),
     this.arcSpan = 0.7,
     this.elevation = 2.0,
+    this.semanticsLabel = 'Pull to refresh',
   });
 
   /// Called when the user completes a pull-to-refresh gesture.
@@ -61,6 +67,15 @@ class WigglyRefreshIndicator extends StatefulWidget {
 
   /// Distance from the top edge where the badge rests while refreshing.
   final double displacement;
+
+  /// Drag distance that triggers refresh on release.
+  final double triggerDistance;
+
+  /// Maximum overscroll drag distance tracked for progress.
+  final double maxDragDistance;
+
+  /// Predicate to filter which scroll notifications are handled.
+  final ScrollNotificationPredicate notificationPredicate;
 
   /// Diameter of the indicator circle in logical pixels.
   final double size;
@@ -95,19 +110,23 @@ class WigglyRefreshIndicator extends StatefulWidget {
   /// Elevation of the badge card shadow.
   final double elevation;
 
+  /// Semantic label for assistive technologies.
+  final String semanticsLabel;
+
   @override
   State<WigglyRefreshIndicator> createState() => _WigglyRefreshIndicatorState();
 }
 
 class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
     with TickerProviderStateMixin {
-  static const double _triggerDistance = 80.0;
-  static const double _maxDragDistance = 120.0;
+  static const double _reducedMotionDurationScale = 1.8;
+  static const double _reducedMotionAmplitudeScale = 0.65;
 
   late final AnimationController _wiggleController;
   late final Animation<double> _phaseAnim;
   late final AnimationController _rotateController;
   late final Animation<double> _rotateAnim;
+  bool _reduceMotion = false;
 
   double _dragProgress = 0.0;
   bool _refreshing = false;
@@ -117,15 +136,17 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   @override
   void initState() {
     super.initState();
+    _reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
 
     _wiggleController = AnimationController(
       vsync: this,
-      duration: widget.wiggleDuration,
+      duration: _effectiveDuration(widget.wiggleDuration),
     )..repeat();
 
     _rotateController = AnimationController(
       vsync: this,
-      duration: widget.rotateDuration,
+      duration: _effectiveDuration(widget.rotateDuration),
     );
 
     _phaseAnim = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
@@ -138,21 +159,24 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+
+    if (_reduceMotion != nextReduceMotion) {
+      _reduceMotion = nextReduceMotion;
+      _applyEffectiveDurations();
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant WigglyRefreshIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.wiggleDuration != widget.wiggleDuration) {
-      _wiggleController.duration = widget.wiggleDuration;
-      if (_wiggleController.isAnimating) {
-        _wiggleController.repeat();
-      }
-    }
-
-    if (oldWidget.rotateDuration != widget.rotateDuration) {
-      _rotateController.duration = widget.rotateDuration;
-      if (_refreshing) {
-        _rotateController.repeat();
-      }
+    if (oldWidget.wiggleDuration != widget.wiggleDuration ||
+        oldWidget.rotateDuration != widget.rotateDuration) {
+      _applyEffectiveDurations();
     }
   }
 
@@ -189,16 +213,20 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
+    if (!widget.notificationPredicate(notification)) {
+      return false;
+    }
+
     if (_refreshing) return false;
 
     if (notification is OverscrollNotification &&
         notification.overscroll < 0) {
       final delta = -notification.overscroll;
-      final newOffset = (_dragOffset + delta).clamp(0.0, _maxDragDistance);
+      final newOffset = (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
       setState(() {
         _dragging = true;
         _dragOffset = newOffset;
-        _dragProgress = (_dragOffset / _triggerDistance).clamp(0.0, 1.0);
+        _dragProgress = (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
       });
       return false;
     }
@@ -207,17 +235,18 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
         notification.metrics.extentBefore == 0) {
       final delta = -(notification.scrollDelta ?? 0.0);
       if (delta > 0) {
-        final newOffset = (_dragOffset + delta).clamp(0.0, _maxDragDistance);
+        final newOffset =
+            (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
         setState(() {
           _dragging = true;
           _dragOffset = newOffset;
-          _dragProgress = (_dragOffset / _triggerDistance).clamp(0.0, 1.0);
+          _dragProgress = (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
         });
       }
     }
 
     if (notification is ScrollEndNotification) {
-      if (_dragOffset >= _triggerDistance) {
+      if (_dragOffset >= widget.triggerDistance) {
         setState(() {
           _dragOffset = widget.displacement;
           _dragProgress = 1.0;
@@ -240,6 +269,20 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
 
   @override
   Widget build(BuildContext context) {
+    final theme = WigglyLoadersTheme.maybeOf(context);
+    final resolvedProgressColor =
+        widget.progressColor == WigglyDefaults.refreshProgressColor
+            ? (theme?.refreshProgressColor ?? widget.progressColor)
+            : widget.progressColor;
+    final resolvedTrackColor = widget.trackColor == WigglyDefaults.refreshTrackColor
+        ? (theme?.refreshTrackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedBackgroundColor =
+        widget.backgroundColor == WigglyDefaults.refreshBackgroundColor
+            ? (theme?.refreshBackgroundColor ?? widget.backgroundColor)
+            : widget.backgroundColor;
+    final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
+
     return Stack(
       children: [
         NotificationListener<ScrollNotification>(
@@ -252,25 +295,62 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
             left: 0,
             right: 0,
             child: Center(
-              child: WigglyRefreshBadge(
-                key: const ValueKey('wiggly_refresh_badge'),
-                progress: _refreshing ? 1.0 : _dragProgress,
-                indeterminate: _refreshing,
-                phase: _phaseAnim,
-                rotation: _rotateAnim,
-                size: widget.size,
-                strokeWidth: widget.strokeWidth,
-                wiggleCount: widget.wiggleCount,
-                wiggleAmplitude: widget.wiggleAmplitude,
-                progressColor: widget.progressColor,
-                trackColor: widget.trackColor,
-                backgroundColor: widget.backgroundColor,
-                arcSpan: widget.arcSpan,
-                elevation: widget.elevation,
+              child: Semantics(
+                container: true,
+                label: widget.semanticsLabel,
+                value: _refreshing
+                    ? 'Refreshing'
+                    : '${(_dragProgress * 100).round()} percent',
+                child: WigglyRefreshBadge(
+                  key: const ValueKey('wiggly_refresh_badge'),
+                  progress: _refreshing ? 1.0 : _dragProgress,
+                  indeterminate: _refreshing,
+                  phase: _phaseAnim,
+                  rotation: _rotateAnim,
+                  size: widget.size,
+                  strokeWidth: widget.strokeWidth,
+                  wiggleCount: widget.wiggleCount,
+                  wiggleAmplitude: resolvedWiggleAmplitude,
+                  progressColor: resolvedProgressColor,
+                  trackColor: resolvedTrackColor,
+                  backgroundColor: resolvedBackgroundColor,
+                  arcSpan: widget.arcSpan,
+                  elevation: widget.elevation,
+                ),
               ),
             ),
           ),
       ],
     );
+  }
+
+  Duration _effectiveDuration(Duration duration) {
+    if (!_reduceMotion) {
+      return duration;
+    }
+
+    return Duration(
+      microseconds:
+          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+    );
+  }
+
+  double _effectiveAmplitude(double amplitude) {
+    if (!_reduceMotion) {
+      return amplitude;
+    }
+    return amplitude * _reducedMotionAmplitudeScale;
+  }
+
+  void _applyEffectiveDurations() {
+    _wiggleController.duration = _effectiveDuration(widget.wiggleDuration);
+    if (_wiggleController.isAnimating) {
+      _wiggleController.repeat();
+    }
+
+    _rotateController.duration = _effectiveDuration(widget.rotateDuration);
+    if (_rotateController.isAnimating) {
+      _rotateController.repeat();
+    }
   }
 }

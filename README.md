@@ -36,7 +36,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.1.0
+  wiggly_loaders: ^0.3.0
 ```
 
 Import:
@@ -115,6 +115,25 @@ WigglyRefreshIndicator(
 )
 ```
 
+## Theme extension
+
+Set package-wide defaults through `ThemeData.extensions`:
+
+```dart
+MaterialApp(
+  theme: ThemeData(
+    extensions: const [
+      WigglyLoadersThemeData(
+        loaderProgressColor: Color(0xFF0EA5E9),
+        linearProgressColor: Color(0xFF0EA5E9),
+        refreshProgressColor: Color(0xFF0EA5E9),
+      ),
+    ],
+  ),
+  home: const MyPage(),
+)
+```
+
 ## Example app
 
 Run demo:
@@ -149,6 +168,8 @@ flutter run -d ios
 | `rotateDuration`  | `1600ms` / `1500ms` | Spin speed                                       |
 | `arcSpan`         | `0.7`               | Fraction of circle used by indeterminate arc     |
 | `willAnimate`     | `true`              | Intro animation when widget appears              |
+| `semanticsLabel`  | auto                | Accessibility label                              |
+| `semanticsValue`  | auto                | Accessibility value                              |
 
 ### WigglyLoader only
 
@@ -171,6 +192,8 @@ flutter run -d ios
 | `segmentFraction` | `0.45`     | Width of sliding segment                         |
 | `borderRadius`    | `99.0`     | Track corner radius                              |
 | `willAnimate`     | `true`     | Intro animation when widget appears              |
+| `semanticsLabel`  | auto       | Accessibility label                              |
+| `semanticsValue`  | auto       | Accessibility value                              |
 
 ### WigglyRefreshIndicator only
 
@@ -179,8 +202,12 @@ flutter run -d ios
 | `onRefresh`       | required | Async callback fired on refresh     |
 | `child`           | required | Wrapped scrollable                  |
 | `displacement`    | `50.0`   | Resting top offset while refreshing |
+| `triggerDistance` | `80.0`   | Drag distance needed to trigger     |
+| `maxDragDistance` | `120.0`  | Max tracked pull distance           |
+| `notificationPredicate` | default | Notification filter for nested scrolls |
 | `backgroundColor` | white    | Badge background                    |
 | `elevation`       | `2.0`    | Badge shadow elevation              |
+| `semanticsLabel`  | `Pull to refresh` | Accessibility label         |
 
 ## Behavior notes
 
@@ -189,6 +216,7 @@ flutter run -d ios
 - `WigglyLinearLoader` keeps wave phase anchored to full width so pattern does not jump while segment slides
 - `WigglyRefreshIndicator` switches from pull progress to indeterminate spin until `onRefresh` completes
 - Duration props update correctly on rebuilds
+- When `MediaQuery.disableAnimations` is true, motion automatically softens (slower + lower amplitude)
 
 ## Customization tips
 

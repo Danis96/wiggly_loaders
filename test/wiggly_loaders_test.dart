@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wiggly_loaders/wiggly_loaders.dart';
+import 'package:wiggly_loaders/src/internal/wiggly_arc_painter.dart';
 
 void main() {
   group('WigglyLoader', () {
@@ -98,6 +99,58 @@ void main() {
 
       final widget = tester.widget<WigglyLoader>(find.byType(WigglyLoader));
       expect(widget.willAnimate, isFalse);
+    });
+
+    testWidgets('applies theme extension colors for default values',
+        (tester) async {
+      const themedColor = Color(0xFFE11D48);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [
+              WigglyLoadersThemeData(loaderProgressColor: themedColor),
+            ],
+          ),
+          home: const Scaffold(
+            body: Center(
+              child: WigglyLoader(progress: 0.5),
+            ),
+          ),
+        ),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyArcPainter;
+      expect(painter.progressColor, themedColor);
+    });
+
+    testWidgets('sets default semantics for determinate loader',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(progress: 0.42),
+            ),
+          ),
+        ),
+      );
+
+      final semantics = tester.widget<Semantics>(
+        find.descendant(
+          of: find.byType(WigglyLoader),
+          matching: find.byType(Semantics),
+        ),
+      );
+      expect(semantics.properties.label, 'Loading progress');
+      expect(semantics.properties.value, '42 percent');
     });
   });
 
@@ -207,6 +260,32 @@ void main() {
       );
       expect(find.text('Item 1'), findsOneWidget);
       expect(find.byType(WigglyRefreshIndicator), findsOneWidget);
+    });
+
+    testWidgets('accepts trigger/max drag and notification predicate',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WigglyRefreshIndicator(
+              onRefresh: () async {},
+              triggerDistance: 92,
+              maxDragDistance: 140,
+              notificationPredicate: (_) => true,
+              child: ListView(
+                children: const [Text('Item 1')],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<WigglyRefreshIndicator>(
+        find.byType(WigglyRefreshIndicator),
+      );
+      expect(indicator.triggerDistance, 92);
+      expect(indicator.maxDragDistance, 140);
+      expect(indicator.notificationPredicate, isNotNull);
     });
   });
 }

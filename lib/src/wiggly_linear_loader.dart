@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'internal/wiggly_defaults.dart';
 import 'internal/wiggly_linear_canvas.dart';
+import 'wiggly_loaders_theme.dart';
 
 /// A wiggly/wavy horizontal linear loading indicator.
 ///
@@ -23,13 +25,15 @@ class WigglyLinearLoader extends StatefulWidget {
     this.height = 6.0,
     this.wiggleCount = 8,
     this.wiggleAmplitude = 2.5,
-    this.progressColor = const Color(0xFF3B82F6),
-    this.trackColor = const Color(0xFFE5E7EB),
+    this.progressColor = WigglyDefaults.linearProgressColor,
+    this.trackColor = WigglyDefaults.linearTrackColor,
     this.wiggleDuration = const Duration(milliseconds: 1000),
     this.slideDuration = const Duration(milliseconds: 1400),
     this.segmentFraction = 0.45,
     this.borderRadius = 99.0,
     this.willAnimate = true,
+    this.semanticsLabel,
+    this.semanticsValue,
   })  : _progress = progress,
         _indeterminate = false,
         assert(
@@ -43,13 +47,15 @@ class WigglyLinearLoader extends StatefulWidget {
     double height = 6.0,
     int wiggleCount = 8,
     double wiggleAmplitude = 2.5,
-    Color progressColor = const Color(0xFF3B82F6),
-    Color trackColor = const Color(0xFFE5E7EB),
+    Color progressColor = WigglyDefaults.linearProgressColor,
+    Color trackColor = WigglyDefaults.linearTrackColor,
     Duration wiggleDuration = const Duration(milliseconds: 1000),
     Duration slideDuration = const Duration(milliseconds: 1400),
     double segmentFraction = 0.45,
     double borderRadius = 99.0,
     bool willAnimate = true,
+    String? semanticsLabel,
+    String? semanticsValue,
   }) : this._(
           key: key,
           progress: 0.0,
@@ -64,6 +70,8 @@ class WigglyLinearLoader extends StatefulWidget {
           segmentFraction: segmentFraction,
           borderRadius: borderRadius,
           willAnimate: willAnimate,
+          semanticsLabel: semanticsLabel,
+          semanticsValue: semanticsValue,
         );
 
   const WigglyLinearLoader._({
@@ -80,6 +88,8 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.segmentFraction,
     required this.borderRadius,
     required this.willAnimate,
+    required this.semanticsLabel,
+    required this.semanticsValue,
   })  : _progress = progress,
         _indeterminate = indeterminate;
 
@@ -116,31 +126,43 @@ class WigglyLinearLoader extends StatefulWidget {
   /// Whether to play an intro animation when the widget is shown.
   final bool willAnimate;
 
+  /// Optional semantic label for assistive technologies.
+  final String? semanticsLabel;
+
+  /// Optional semantic value for assistive technologies.
+  final String? semanticsValue;
+
   @override
   State<WigglyLinearLoader> createState() => _WigglyLinearLoaderState();
 }
 
 class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     with TickerProviderStateMixin {
+  static const double _reducedMotionDurationScale = 1.8;
+  static const double _reducedMotionAmplitudeScale = 0.65;
+
   late final AnimationController _wiggleController;
   late final AnimationController _slideController;
   late final Animation<double> _phaseAnim;
   late Animation<double> _slideAnim;
   late final AnimationController _entryController;
   late final Animation<double> _entryAnim;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
+    _reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
 
     _wiggleController = AnimationController(
       vsync: this,
-      duration: widget.wiggleDuration,
+      duration: _effectiveDuration(widget.wiggleDuration),
     )..repeat();
 
     _slideController = AnimationController(
       vsync: this,
-      duration: widget.slideDuration,
+      duration: _effectiveDuration(widget.slideDuration),
     );
 
     _phaseAnim = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
@@ -151,7 +173,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 520),
+      duration: _effectiveDuration(const Duration(milliseconds: 520)),
     )
       ..addListener(_handleEntryTick)
       ..addStatusListener(_handleEntryStatus);
@@ -169,6 +191,18 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
     if (widget._indeterminate && !widget.willAnimate) {
       _slideController.repeat();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+
+    if (_reduceMotion != nextReduceMotion) {
+      _reduceMotion = nextReduceMotion;
+      _applyEffectiveDurations();
     }
   }
 
@@ -211,19 +245,9 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       }
     }
 
-    if (oldWidget.wiggleDuration != widget.wiggleDuration) {
-      _wiggleController.duration = widget.wiggleDuration;
-      if (_wiggleController.isAnimating) {
-        _wiggleController.repeat();
-      }
-    }
-
-    if (oldWidget.slideDuration != widget.slideDuration) {
-      _slideController.duration = widget.slideDuration;
-      if (widget._indeterminate &&
-          (!widget.willAnimate || _entryController.isCompleted)) {
-        _slideController.repeat();
-      }
+    if (oldWidget.wiggleDuration != widget.wiggleDuration ||
+        oldWidget.slideDuration != widget.slideDuration) {
+      _applyEffectiveDurations();
     }
 
     if (oldWidget._indeterminate != widget._indeterminate ||
@@ -259,24 +283,77 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
   @override
   Widget build(BuildContext context) {
+    final theme = WigglyLoadersTheme.maybeOf(context);
+    final resolvedProgressColor =
+        widget.progressColor == WigglyDefaults.linearProgressColor
+            ? (theme?.linearProgressColor ?? widget.progressColor)
+            : widget.progressColor;
+    final resolvedTrackColor = widget.trackColor == WigglyDefaults.linearTrackColor
+        ? (theme?.linearTrackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
         widget.willAnimate &&
         !_entryController.isCompleted;
+    final semanticsLabel = widget.semanticsLabel ??
+        (widget._indeterminate ? 'Loading' : 'Loading progress');
+    final semanticsValue = widget.semanticsValue ??
+        (widget._indeterminate
+            ? null
+            : '${(widget._progress * 100).round()} percent');
 
-    return WigglyLinearCanvas(
-      height: widget.height,
-      wiggleAmplitude: widget.wiggleAmplitude,
-      progress:
-          showIndeterminateIntro ? entryValue : widget._progress * entryValue,
-      indeterminate: widget._indeterminate && !showIndeterminateIntro,
-      phase: _phaseAnim,
-      slideOffset: _slideAnim,
-      wiggleCount: widget.wiggleCount,
-      progressColor: widget.progressColor,
-      trackColor: widget.trackColor,
-      segmentFraction: widget.segmentFraction,
-      borderRadius: widget.borderRadius,
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      value: semanticsValue,
+      child: WigglyLinearCanvas(
+        height: widget.height,
+        wiggleAmplitude: resolvedWiggleAmplitude,
+        progress:
+            showIndeterminateIntro ? entryValue : widget._progress * entryValue,
+        indeterminate: widget._indeterminate && !showIndeterminateIntro,
+        phase: _phaseAnim,
+        slideOffset: _slideAnim,
+        wiggleCount: widget.wiggleCount,
+        progressColor: resolvedProgressColor,
+        trackColor: resolvedTrackColor,
+        segmentFraction: widget.segmentFraction,
+        borderRadius: widget.borderRadius,
+      ),
     );
+  }
+
+  Duration _effectiveDuration(Duration duration) {
+    if (!_reduceMotion) {
+      return duration;
+    }
+
+    return Duration(
+      microseconds:
+          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+    );
+  }
+
+  double _effectiveAmplitude(double amplitude) {
+    if (!_reduceMotion) {
+      return amplitude;
+    }
+    return amplitude * _reducedMotionAmplitudeScale;
+  }
+
+  void _applyEffectiveDurations() {
+    _wiggleController.duration = _effectiveDuration(widget.wiggleDuration);
+    if (_wiggleController.isAnimating) {
+      _wiggleController.repeat();
+    }
+
+    _slideController.duration = _effectiveDuration(widget.slideDuration);
+    if (_slideController.isAnimating) {
+      _slideController.repeat();
+    }
+
+    _entryController.duration =
+        _effectiveDuration(const Duration(milliseconds: 520));
   }
 }

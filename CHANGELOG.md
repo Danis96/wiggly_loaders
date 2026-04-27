@@ -1,3 +1,11 @@
+## 0.3.0
+
+* Add package theme extension support via `WigglyLoadersThemeData`
+* Add default semantics labels/values for loader, linear loader, and refresh indicator
+* Add soft reduced-motion behavior when `MediaQuery.disableAnimations` is enabled
+* Add `triggerDistance`, `maxDragDistance`, and `notificationPredicate` to `WigglyRefreshIndicator`
+* Add test coverage for theme resolution, semantics, and new refresh indicator parameters
+
 ## 0.2.0
 
 * Add `willAnimate` (default `true`) to `WigglyLoader` and `WigglyLinearLoader`

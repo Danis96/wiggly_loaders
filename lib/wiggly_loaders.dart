@@ -10,3 +10,4 @@ library wiggly_loaders;
 export 'src/wiggly_loader.dart';
 export 'src/wiggly_linear_loader.dart';
 export 'src/wiggly_refresh_indicator.dart';
+export 'src/wiggly_loaders_theme.dart';
