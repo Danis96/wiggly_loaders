@@ -1,3 +1,10 @@
+## 0.4.0
+
+* Add `WigglyDotsLoader` for compact inline loading and progress states
+* Add dots theming support in `WigglyLoadersThemeData`
+* Add README cookbook recipes for cards, buttons, pagination, refresh, and themed usage
+* Add tests for dots assertions, mode switching, theme resolution, reduced motion, and semantics
+
 ## 0.3.0
 
 * Add package theme extension support via `WigglyLoadersThemeData`

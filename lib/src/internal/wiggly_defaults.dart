@@ -7,8 +7,10 @@ class WigglyDefaults {
   static const Color linearProgressColor = Color(0xFF3B82F6);
   static const Color linearTrackColor = Color(0xFFE5E7EB);
 
+  static const Color dotsProgressColor = Color(0xFF3B82F6);
+  static const Color dotsTrackColor = Color(0xFFE5E7EB);
+
   static const Color refreshProgressColor = Color(0xFF3B89F6);
   static const Color refreshTrackColor = Color(0xFFE5E7EB);
   static const Color refreshBackgroundColor = Colors.white;
 }
-

@@ -219,10 +219,10 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
 
     if (_refreshing) return false;
 
-    if (notification is OverscrollNotification &&
-        notification.overscroll < 0) {
+    if (notification is OverscrollNotification && notification.overscroll < 0) {
       final delta = -notification.overscroll;
-      final newOffset = (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
+      final newOffset =
+          (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
       setState(() {
         _dragging = true;
         _dragOffset = newOffset;
@@ -240,7 +240,8 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
         setState(() {
           _dragging = true;
           _dragOffset = newOffset;
-          _dragProgress = (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
+          _dragProgress =
+              (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
         });
       }
     }
@@ -274,9 +275,10 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
         widget.progressColor == WigglyDefaults.refreshProgressColor
             ? (theme?.refreshProgressColor ?? widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor = widget.trackColor == WigglyDefaults.refreshTrackColor
-        ? (theme?.refreshTrackColor ?? widget.trackColor)
-        : widget.trackColor;
+    final resolvedTrackColor =
+        widget.trackColor == WigglyDefaults.refreshTrackColor
+            ? (theme?.refreshTrackColor ?? widget.trackColor)
+            : widget.trackColor;
     final resolvedBackgroundColor =
         widget.backgroundColor == WigglyDefaults.refreshBackgroundColor
             ? (theme?.refreshBackgroundColor ?? widget.backgroundColor)

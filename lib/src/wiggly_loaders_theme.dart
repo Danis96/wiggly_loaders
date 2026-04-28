@@ -11,6 +11,8 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
     this.loaderTrackColor,
     this.linearProgressColor,
     this.linearTrackColor,
+    this.dotsProgressColor,
+    this.dotsTrackColor,
     this.refreshProgressColor,
     this.refreshTrackColor,
     this.refreshBackgroundColor,
@@ -20,6 +22,8 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
   final Color? loaderTrackColor;
   final Color? linearProgressColor;
   final Color? linearTrackColor;
+  final Color? dotsProgressColor;
+  final Color? dotsTrackColor;
   final Color? refreshProgressColor;
   final Color? refreshTrackColor;
   final Color? refreshBackgroundColor;
@@ -30,6 +34,8 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
     Color? loaderTrackColor,
     Color? linearProgressColor,
     Color? linearTrackColor,
+    Color? dotsProgressColor,
+    Color? dotsTrackColor,
     Color? refreshProgressColor,
     Color? refreshTrackColor,
     Color? refreshBackgroundColor,
@@ -39,6 +45,8 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
       loaderTrackColor: loaderTrackColor ?? this.loaderTrackColor,
       linearProgressColor: linearProgressColor ?? this.linearProgressColor,
       linearTrackColor: linearTrackColor ?? this.linearTrackColor,
+      dotsProgressColor: dotsProgressColor ?? this.dotsProgressColor,
+      dotsTrackColor: dotsTrackColor ?? this.dotsTrackColor,
       refreshProgressColor: refreshProgressColor ?? this.refreshProgressColor,
       refreshTrackColor: refreshTrackColor ?? this.refreshTrackColor,
       refreshBackgroundColor:
@@ -62,6 +70,9 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
       linearProgressColor:
           Color.lerp(linearProgressColor, other.linearProgressColor, t),
       linearTrackColor: Color.lerp(linearTrackColor, other.linearTrackColor, t),
+      dotsProgressColor:
+          Color.lerp(dotsProgressColor, other.dotsProgressColor, t),
+      dotsTrackColor: Color.lerp(dotsTrackColor, other.dotsTrackColor, t),
       refreshProgressColor:
           Color.lerp(refreshProgressColor, other.refreshProgressColor, t),
       refreshTrackColor:
@@ -77,4 +88,3 @@ class WigglyLoadersTheme {
     return Theme.of(context).extension<WigglyLoadersThemeData>();
   }
 }
-

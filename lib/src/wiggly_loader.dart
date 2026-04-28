@@ -286,9 +286,10 @@ class _WigglyLoaderState extends State<WigglyLoader>
         widget.progressColor == WigglyDefaults.loaderProgressColor
             ? (theme?.loaderProgressColor ?? widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor = widget.trackColor == WigglyDefaults.loaderTrackColor
-        ? (theme?.loaderTrackColor ?? widget.trackColor)
-        : widget.trackColor;
+    final resolvedTrackColor =
+        widget.trackColor == WigglyDefaults.loaderTrackColor
+            ? (theme?.loaderTrackColor ?? widget.trackColor)
+            : widget.trackColor;
     final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&

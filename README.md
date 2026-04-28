@@ -1,6 +1,6 @@
 # wiggly_loaders
 
-A collection of smooth, customizable wiggly loading indicators for Flutter. Package ships three widgets: circular progress, linear progress, and pull-to-refresh.
+A collection of smooth, customizable wiggly loading indicators for Flutter. Package ships circular, linear, compact dot, and pull-to-refresh variants.
 
 ## Preview
 
@@ -10,9 +10,10 @@ Demo video:
 
 Screenshots:
 
-| Android                                    | iOS                                 |
-|--------------------------------------------|-------------------------------------|
-| ![Android demo](assets/readme/android.jpg) | ![iOS demo](assets/readme/ios.jpeg) |
+| Android                                       | iOS                                    |
+|-----------------------------------------------|----------------------------------------|
+| ![Android demo 1](assets/readme/android1.png) | ![iOS demo 1](assets/readme/ios1.jpeg) |
+| ![Android demo 2](assets/readme/android2.png) | ![iOS demo 2](assets/readme/ios2.jpeg) |
 
 ## Why use it
 
@@ -28,6 +29,7 @@ Screenshots:
 |--------------------------|-----------------------------------------|----------------------------|
 | `WigglyLoader`           | Circular progress/loading state         | determinate, indeterminate |
 | `WigglyLinearLoader`     | Inline/file/network progress bar        | determinate, indeterminate |
+| `WigglyDotsLoader`       | Compact inline/button/chat status       | determinate, indeterminate |
 | `WigglyRefreshIndicator` | Pull-to-refresh wrapper for scrollables | pull progress, refreshing  |
 
 ## Installation
@@ -36,7 +38,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.3.0
+  wiggly_loaders: ^0.4.0
 ```
 
 Import:
@@ -89,6 +91,27 @@ WigglyLinearLoader(
 )
 ```
 
+### WigglyDotsLoader
+
+```dart
+// Known progress
+WigglyDotsLoader(progress: 0.6)
+
+// Unknown progress
+WigglyDotsLoader.indeterminate()
+
+// Custom
+WigglyDotsLoader(
+  progress: _sendProgress,
+  dotCount: 5,
+  dotSize: 10,
+  spacing: 8,
+  wiggleAmplitude: 3,
+  progressColor: Colors.teal,
+  trackColor: Colors.teal.shade50,
+)
+```
+
 ### WigglyRefreshIndicator
 
 ```dart
@@ -126,6 +149,7 @@ MaterialApp(
       WigglyLoadersThemeData(
         loaderProgressColor: Color(0xFF0EA5E9),
         linearProgressColor: Color(0xFF0EA5E9),
+        dotsProgressColor: Color(0xFF0EA5E9),
         refreshProgressColor: Color(0xFF0EA5E9),
       ),
     ],
@@ -195,6 +219,22 @@ flutter run -d ios
 | `semanticsLabel`  | auto       | Accessibility label                              |
 | `semanticsValue`  | auto       | Accessibility value                              |
 
+### WigglyDotsLoader
+
+| Parameter         | Default    | Description                                      |
+|-------------------|------------|--------------------------------------------------|
+| `progress`        | required   | Progress from `0.0` to `1.0` in determinate mode |
+| `dotCount`        | `3`        | Number of dots in the row                        |
+| `dotSize`         | `8.0`      | Diameter of each dot                             |
+| `spacing`         | `6.0`      | Gap between dots                                 |
+| `wiggleAmplitude` | `2.5`      | Vertical wiggle size                             |
+| `progressColor`   | blue       | Active dot color                                 |
+| `trackColor`      | light gray | Inactive dot color                               |
+| `duration`        | `900ms`    | Wiggle/travel speed                              |
+| `willAnimate`     | `true`     | Intro animation when widget appears              |
+| `semanticsLabel`  | auto       | Accessibility label                              |
+| `semanticsValue`  | auto       | Accessibility value                              |
+
 ### WigglyRefreshIndicator only
 
 | Parameter         | Default  | Description                         |
@@ -214,6 +254,7 @@ flutter run -d ios
 - Determinate constructors assert `progress` stays inside `0.0..1.0`
 - With `willAnimate: true`, loaders animate in from `0` each time mounted
 - `WigglyLinearLoader` keeps wave phase anchored to full width so pattern does not jump while segment slides
+- `WigglyDotsLoader` uses the same wiggly phase in both modes, with determinate fill or a traveling highlighted cluster
 - `WigglyRefreshIndicator` switches from pull progress to indeterminate spin until `onRefresh` completes
 - Duration props update correctly on rebuilds
 - When `MediaQuery.disableAnimations` is true, motion automatically softens (slower + lower amplitude)
@@ -223,8 +264,137 @@ flutter run -d ios
 - Lower `wiggleAmplitude` for subtle motion
 - Raise `wiggleCount` for denser wave texture
 - Increase `strokeWidth` or `height` for bolder loaders
+- Use `WigglyDotsLoader` when space is tight: buttons, chat sends, inline status rows
 - Use muted `trackColor` for stronger foreground contrast
 - Put text or icons inside `WigglyLoader.child` for compact status UI
+
+## Cookbook
+
+### Upload/download progress card
+
+When to use: file transfer UI with explicit percent.
+
+```dart
+Card(
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Uploading report.pdf'),
+        const SizedBox(height: 12),
+        WigglyLinearLoader(progress: progress, height: 10),
+        const SizedBox(height: 8),
+        Text('${(progress * 100).round()}%'),
+      ],
+    ),
+  ),
+)
+```
+
+Key knobs: `height`, `wiggleAmplitude`, `trackColor`.
+
+### Infinite list pagination footer
+
+When to use: loading next page at bottom of long lists.
+
+```dart
+if (isLoadingMore)
+  const Padding(
+    padding: EdgeInsets.symmetric(vertical: 16),
+    child: Center(
+      child: WigglyDotsLoader.indeterminate(
+        dotCount: 4,
+        semanticsLabel: 'Loading more items',
+      ),
+    ),
+  )
+```
+
+Key knobs: `dotCount`, `dotSize`, `duration`.
+
+### Retry/failure to loading transition
+
+When to use: retry button swaps to in-place progress without layout jump.
+
+```dart
+AnimatedSwitcher(
+  duration: const Duration(milliseconds: 180),
+  child: isRetrying
+      ? const WigglyDotsLoader.indeterminate(
+          key: ValueKey('retrying'),
+          dotCount: 3,
+        )
+      : FilledButton(
+          key: const ValueKey('retry'),
+          onPressed: retry,
+          child: const Text('Retry'),
+        ),
+)
+```
+
+Key knobs: `willAnimate`, `spacing`.
+
+### Button loading state pattern
+
+When to use: async submit/send button with compact inline feedback.
+
+```dart
+FilledButton(
+  onPressed: isSending ? null : sendMessage,
+  child: isSending
+      ? const WigglyDotsLoader.indeterminate(
+          dotSize: 8,
+          spacing: 6,
+          semanticsLabel: 'Sending',
+        )
+      : const Text('Send'),
+)
+```
+
+Key knobs: `dotSize`, `spacing`, `progressColor`.
+
+### Pull-to-refresh with nested scroll handling
+
+When to use: tabs, nested scroll views, or any screen where only top-level pulls should refresh.
+
+```dart
+WigglyRefreshIndicator(
+  onRefresh: reload,
+  notificationPredicate: (notification) => notification.depth == 0,
+  child: NestedScrollView(
+    headerSliverBuilder: (_, __) => [const SliverAppBar(title: Text('Inbox'))],
+    body: ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index) => ListTile(title: Text(items[index])),
+    ),
+  ),
+)
+```
+
+Key knobs: `notificationPredicate`, `triggerDistance`, `maxDragDistance`.
+
+### Themed loaders via `WigglyLoadersThemeData`
+
+When to use: one visual language across all loaders without repeating colors.
+
+```dart
+MaterialApp(
+  theme: ThemeData(
+    extensions: const [
+      WigglyLoadersThemeData(
+        loaderProgressColor: Color(0xFF0F766E),
+        linearProgressColor: Color(0xFF0F766E),
+        dotsProgressColor: Color(0xFF0F766E),
+        refreshProgressColor: Color(0xFF0F766E),
+      ),
+    ],
+  ),
+  home: const DashboardScreen(),
+)
+```
+
+Key knobs: `loaderProgressColor`, `linearProgressColor`, `dotsProgressColor`, `refreshProgressColor`.
 
 ## Package status
 
