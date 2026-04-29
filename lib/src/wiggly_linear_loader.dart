@@ -39,7 +39,18 @@ class WigglyLinearLoader extends StatefulWidget {
         assert(
           progress >= 0.0 && progress <= 1.0,
           'progress must be between 0.0 and 1.0',
-        );
+        ),
+        assert(height > 0.0, 'height must be greater than 0'),
+        assert(wiggleCount > 0, 'wiggleCount must be greater than 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        ),
+        assert(
+          segmentFraction > 0.0 && segmentFraction <= 1.0,
+          'segmentFraction must be between 0.0 and 1.0',
+        ),
+        assert(borderRadius >= 0.0, 'borderRadius must be at least 0');
 
   /// Indeterminate mode: a wiggly segment that slides across continuously.
   const WigglyLinearLoader.indeterminate({
@@ -91,7 +102,18 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.semanticsLabel,
     required this.semanticsValue,
   })  : _progress = progress,
-        _indeterminate = indeterminate;
+        _indeterminate = indeterminate,
+        assert(height > 0.0, 'height must be greater than 0'),
+        assert(wiggleCount > 0, 'wiggleCount must be greater than 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        ),
+        assert(
+          segmentFraction > 0.0 && segmentFraction <= 1.0,
+          'segmentFraction must be between 0.0 and 1.0',
+        ),
+        assert(borderRadius >= 0.0, 'borderRadius must be at least 0');
 
   final double _progress;
   final bool _indeterminate;
@@ -138,6 +160,10 @@ class WigglyLinearLoader extends StatefulWidget {
 
 class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     with TickerProviderStateMixin {
+  static const double _defaultHeight = 6.0;
+  static const Duration _defaultWiggleDuration = Duration(milliseconds: 1000);
+  static const Duration _defaultSlideDuration = Duration(milliseconds: 1400);
+  static const Duration _defaultEntryDuration = Duration(milliseconds: 520);
   static const double _reducedMotionDurationScale = 1.8;
   static const double _reducedMotionAmplitudeScale = 0.65;
 
@@ -146,7 +172,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   late final Animation<double> _phaseAnim;
   late Animation<double> _slideAnim;
   late final AnimationController _entryController;
-  late final Animation<double> _entryAnim;
+  late Animation<double> _entryAnim;
+  WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
   @override
@@ -173,15 +200,12 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
     _entryController = AnimationController(
       vsync: this,
-      duration: _effectiveDuration(const Duration(milliseconds: 520)),
+      duration: _effectiveDuration(_defaultEntryDuration),
     )
       ..addListener(_handleEntryTick)
       ..addStatusListener(_handleEntryStatus);
 
-    _entryAnim = CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOutCubic,
-    );
+    _entryAnim = _buildEntryAnimation();
 
     if (widget.willAnimate) {
       _entryController.forward(from: 0.0);
@@ -199,10 +223,23 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     super.didChangeDependencies();
     final mediaQuery = MediaQuery.maybeOf(context);
     final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+    final nextTheme = WigglyLoadersTheme.maybeOf(context);
+    final themeChanged = _theme != nextTheme;
+    final easeChanged = _theme?.ease != nextTheme?.ease;
+    _theme = nextTheme;
 
     if (_reduceMotion != nextReduceMotion) {
       _reduceMotion = nextReduceMotion;
       _applyEffectiveDurations();
+    }
+
+    if (themeChanged) {
+      _applyEffectiveDurations();
+    }
+
+    if (easeChanged) {
+      _entryAnim = _buildEntryAnimation();
+      _slideAnim = _buildSlideAnimation();
     }
   }
 
@@ -211,7 +248,10 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       begin: -widget.segmentFraction,
       end: 1.0,
     ).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _slideController,
+        curve: _theme?.ease ?? Curves.easeInOut,
+      ),
     );
   }
 
@@ -283,15 +323,21 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
 
   @override
   Widget build(BuildContext context) {
-    final theme = WigglyLoadersTheme.maybeOf(context);
     final resolvedProgressColor =
         widget.progressColor == WigglyDefaults.linearProgressColor
-            ? (theme?.linearProgressColor ?? widget.progressColor)
+            ? (_theme?.linearProgressColor ??
+                _theme?.progressColor ??
+                widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor =
-        widget.trackColor == WigglyDefaults.linearTrackColor
-            ? (theme?.linearTrackColor ?? widget.trackColor)
-            : widget.trackColor;
+    final resolvedTrackColor = widget.trackColor ==
+            WigglyDefaults.linearTrackColor
+        ? (_theme?.linearTrackColor ?? _theme?.trackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedHeight = _resolveScaledValue(
+      value: widget.height,
+      defaultValue: _defaultHeight,
+      scale: _theme?.sizeScale,
+    );
     final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
@@ -309,7 +355,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       label: semanticsLabel,
       value: semanticsValue,
       child: WigglyLinearCanvas(
-        height: widget.height,
+        height: resolvedHeight,
         wiggleAmplitude: resolvedWiggleAmplitude,
         progress:
             showIndeterminateIntro ? entryValue : widget._progress * entryValue,
@@ -326,13 +372,18 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   }
 
   Duration _effectiveDuration(Duration duration) {
+    final themedDuration = _resolveDuration(
+      value: duration,
+      defaultValue: _defaultDurationFor(duration),
+    );
+
     if (!_reduceMotion) {
-      return duration;
+      return themedDuration;
     }
 
     return Duration(
       microseconds:
-          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+          (themedDuration.inMicroseconds * _reducedMotionDurationScale).round(),
     );
   }
 
@@ -354,7 +405,53 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       _slideController.repeat();
     }
 
-    _entryController.duration =
-        _effectiveDuration(const Duration(milliseconds: 520));
+    _entryController.duration = _effectiveDuration(_defaultEntryDuration);
+  }
+
+  Animation<double> _buildEntryAnimation() {
+    return CurvedAnimation(
+      parent: _entryController,
+      curve: _theme?.ease ?? Curves.easeOutCubic,
+    );
+  }
+
+  Duration _resolveDuration({
+    required Duration value,
+    required Duration defaultValue,
+  }) {
+    if (value != defaultValue) {
+      return value;
+    }
+
+    final speedFactor = _theme?.speedFactor;
+    if (speedFactor == null || speedFactor == 1.0) {
+      return value;
+    }
+
+    return Duration(
+      microseconds: (value.inMicroseconds / speedFactor).round(),
+    );
+  }
+
+  Duration _defaultDurationFor(Duration duration) {
+    if (duration == widget.wiggleDuration) {
+      return _defaultWiggleDuration;
+    }
+    if (duration == widget.slideDuration) {
+      return _defaultSlideDuration;
+    }
+    return _defaultEntryDuration;
+  }
+
+  double _resolveScaledValue({
+    required double value,
+    required double defaultValue,
+    required double? scale,
+  }) {
+    if (value != defaultValue || scale == null || scale == 1.0) {
+      return value;
+    }
+
+    return value * scale;
   }
 }

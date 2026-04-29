@@ -40,6 +40,17 @@ class WigglyLoader extends StatefulWidget {
         assert(
           progress >= 0.0 && progress <= 1.0,
           'progress must be between 0.0 and 1.0',
+        ),
+        assert(size > 0.0, 'size must be greater than 0'),
+        assert(strokeWidth > 0.0, 'strokeWidth must be greater than 0'),
+        assert(wiggleCount > 0, 'wiggleCount must be greater than 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        ),
+        assert(
+          arcSpan >= 0.0 && arcSpan <= 1.0,
+          'arcSpan must be between 0.0 and 1.0',
         );
 
   /// Indeterminate mode: arc rotates continuously with no fixed progress value.
@@ -95,7 +106,18 @@ class WigglyLoader extends StatefulWidget {
     required this.semanticsLabel,
     required this.semanticsValue,
   })  : _progress = progress,
-        _indeterminate = indeterminate;
+        _indeterminate = indeterminate,
+        assert(size > 0.0, 'size must be greater than 0'),
+        assert(strokeWidth > 0.0, 'strokeWidth must be greater than 0'),
+        assert(wiggleCount > 0, 'wiggleCount must be greater than 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        ),
+        assert(
+          arcSpan >= 0.0 && arcSpan <= 1.0,
+          'arcSpan must be between 0.0 and 1.0',
+        );
 
   final double _progress;
   final bool _indeterminate;
@@ -146,6 +168,11 @@ class WigglyLoader extends StatefulWidget {
 
 class _WigglyLoaderState extends State<WigglyLoader>
     with TickerProviderStateMixin {
+  static const double _defaultSize = 72.0;
+  static const double _defaultStrokeWidth = 4.5;
+  static const Duration _defaultWiggleDuration = Duration(milliseconds: 1200);
+  static const Duration _defaultRotateDuration = Duration(milliseconds: 1600);
+  static const Duration _defaultEntryDuration = Duration(milliseconds: 520);
   static const double _reducedMotionDurationScale = 1.8;
   static const double _reducedMotionAmplitudeScale = 0.65;
 
@@ -154,7 +181,8 @@ class _WigglyLoaderState extends State<WigglyLoader>
   late final Animation<double> _phaseAnim;
   late final Animation<double> _rotateAnim;
   late final AnimationController _entryController;
-  late final Animation<double> _entryAnim;
+  late Animation<double> _entryAnim;
+  WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
   @override
@@ -183,15 +211,12 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
     _entryController = AnimationController(
       vsync: this,
-      duration: _effectiveDuration(const Duration(milliseconds: 520)),
+      duration: _effectiveDuration(_defaultEntryDuration),
     )
       ..addListener(_handleEntryTick)
       ..addStatusListener(_handleEntryStatus);
 
-    _entryAnim = CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOutCubic,
-    );
+    _entryAnim = _buildEntryAnimation();
 
     if (widget.willAnimate) {
       _entryController.forward(from: 0.0);
@@ -209,10 +234,22 @@ class _WigglyLoaderState extends State<WigglyLoader>
     super.didChangeDependencies();
     final mediaQuery = MediaQuery.maybeOf(context);
     final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+    final nextTheme = WigglyLoadersTheme.maybeOf(context);
+    final themeChanged = _theme != nextTheme;
+    final easeChanged = _theme?.ease != nextTheme?.ease;
+    _theme = nextTheme;
 
     if (_reduceMotion != nextReduceMotion) {
       _reduceMotion = nextReduceMotion;
       _applyEffectiveDurations();
+    }
+
+    if (themeChanged) {
+      _applyEffectiveDurations();
+    }
+
+    if (easeChanged) {
+      _entryAnim = _buildEntryAnimation();
     }
   }
 
@@ -281,15 +318,26 @@ class _WigglyLoaderState extends State<WigglyLoader>
 
   @override
   Widget build(BuildContext context) {
-    final theme = WigglyLoadersTheme.maybeOf(context);
     final resolvedProgressColor =
         widget.progressColor == WigglyDefaults.loaderProgressColor
-            ? (theme?.loaderProgressColor ?? widget.progressColor)
+            ? (_theme?.loaderProgressColor ??
+                _theme?.progressColor ??
+                widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor =
-        widget.trackColor == WigglyDefaults.loaderTrackColor
-            ? (theme?.loaderTrackColor ?? widget.trackColor)
-            : widget.trackColor;
+    final resolvedTrackColor = widget.trackColor ==
+            WigglyDefaults.loaderTrackColor
+        ? (_theme?.loaderTrackColor ?? _theme?.trackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedSize = _resolveScaledValue(
+      value: widget.size,
+      defaultValue: _defaultSize,
+      scale: _theme?.sizeScale,
+    );
+    final resolvedStrokeWidth = _resolveScaledValue(
+      value: widget.strokeWidth,
+      defaultValue: _defaultStrokeWidth,
+      scale: _theme?.strokeWidthScale,
+    );
     final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
@@ -307,13 +355,13 @@ class _WigglyLoaderState extends State<WigglyLoader>
       label: semanticsLabel,
       value: semanticsValue,
       child: WigglyArcCanvas(
-        size: widget.size,
+        size: resolvedSize,
         progress:
             showIndeterminateIntro ? entryValue : widget._progress * entryValue,
         indeterminate: widget._indeterminate && !showIndeterminateIntro,
         phase: _phaseAnim,
         rotation: _rotateAnim,
-        strokeWidth: widget.strokeWidth,
+        strokeWidth: resolvedStrokeWidth,
         wiggleCount: widget.wiggleCount,
         wiggleAmplitude: resolvedWiggleAmplitude,
         progressColor: resolvedProgressColor,
@@ -325,13 +373,18 @@ class _WigglyLoaderState extends State<WigglyLoader>
   }
 
   Duration _effectiveDuration(Duration duration) {
+    final themedDuration = _resolveDuration(
+      value: duration,
+      defaultValue: _defaultDurationFor(duration),
+    );
+
     if (!_reduceMotion) {
-      return duration;
+      return themedDuration;
     }
 
     return Duration(
       microseconds:
-          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+          (themedDuration.inMicroseconds * _reducedMotionDurationScale).round(),
     );
   }
 
@@ -353,7 +406,53 @@ class _WigglyLoaderState extends State<WigglyLoader>
       _rotateController.repeat();
     }
 
-    _entryController.duration =
-        _effectiveDuration(const Duration(milliseconds: 520));
+    _entryController.duration = _effectiveDuration(_defaultEntryDuration);
+  }
+
+  Animation<double> _buildEntryAnimation() {
+    return CurvedAnimation(
+      parent: _entryController,
+      curve: _theme?.ease ?? Curves.easeOutCubic,
+    );
+  }
+
+  Duration _resolveDuration({
+    required Duration value,
+    required Duration defaultValue,
+  }) {
+    if (value != defaultValue) {
+      return value;
+    }
+
+    final speedFactor = _theme?.speedFactor;
+    if (speedFactor == null || speedFactor == 1.0) {
+      return value;
+    }
+
+    return Duration(
+      microseconds: (value.inMicroseconds / speedFactor).round(),
+    );
+  }
+
+  Duration _defaultDurationFor(Duration duration) {
+    if (duration == widget.wiggleDuration) {
+      return _defaultWiggleDuration;
+    }
+    if (duration == widget.rotateDuration) {
+      return _defaultRotateDuration;
+    }
+    return _defaultEntryDuration;
+  }
+
+  double _resolveScaledValue({
+    required double value,
+    required double defaultValue,
+    required double? scale,
+  }) {
+    if (value != defaultValue || scale == null || scale == 1.0) {
+      return value;
+    }
+
+    return value * scale;
   }
 }

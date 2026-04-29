@@ -56,7 +56,27 @@ class WigglyRefreshIndicator extends StatefulWidget {
     this.arcSpan = 0.7,
     this.elevation = 2.0,
     this.semanticsLabel = 'Pull to refresh',
-  });
+  })  : assert(displacement >= 0.0, 'displacement must be at least 0'),
+        assert(
+          triggerDistance > 0.0,
+          'triggerDistance must be greater than 0',
+        ),
+        assert(
+          maxDragDistance >= triggerDistance,
+          'maxDragDistance must be at least triggerDistance',
+        ),
+        assert(size > 0.0, 'size must be greater than 0'),
+        assert(strokeWidth > 0.0, 'strokeWidth must be greater than 0'),
+        assert(wiggleCount > 0, 'wiggleCount must be greater than 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        ),
+        assert(
+          arcSpan >= 0.0 && arcSpan <= 1.0,
+          'arcSpan must be between 0.0 and 1.0',
+        ),
+        assert(elevation >= 0.0, 'elevation must be at least 0');
 
   /// Called when the user completes a pull-to-refresh gesture.
   /// The indicator keeps spinning until the returned [Future] resolves.
@@ -119,6 +139,10 @@ class WigglyRefreshIndicator extends StatefulWidget {
 
 class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
     with TickerProviderStateMixin {
+  static const double _defaultSize = 52.0;
+  static const double _defaultStrokeWidth = 4.0;
+  static const Duration _defaultWiggleDuration = Duration(milliseconds: 1200);
+  static const Duration _defaultRotateDuration = Duration(milliseconds: 1500);
   static const double _reducedMotionDurationScale = 1.8;
   static const double _reducedMotionAmplitudeScale = 0.65;
 
@@ -126,6 +150,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   late final Animation<double> _phaseAnim;
   late final AnimationController _rotateController;
   late final Animation<double> _rotateAnim;
+  WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
   double _dragProgress = 0.0;
@@ -163,9 +188,16 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
     super.didChangeDependencies();
     final mediaQuery = MediaQuery.maybeOf(context);
     final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+    final nextTheme = WigglyLoadersTheme.maybeOf(context);
+    final themeChanged = _theme != nextTheme;
+    _theme = nextTheme;
 
     if (_reduceMotion != nextReduceMotion) {
       _reduceMotion = nextReduceMotion;
+      _applyEffectiveDurations();
+    }
+
+    if (themeChanged) {
       _applyEffectiveDurations();
     }
   }
@@ -270,19 +302,32 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final theme = WigglyLoadersTheme.maybeOf(context);
     final resolvedProgressColor =
         widget.progressColor == WigglyDefaults.refreshProgressColor
-            ? (theme?.refreshProgressColor ?? widget.progressColor)
+            ? (_theme?.refreshProgressColor ??
+                _theme?.progressColor ??
+                widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor =
-        widget.trackColor == WigglyDefaults.refreshTrackColor
-            ? (theme?.refreshTrackColor ?? widget.trackColor)
-            : widget.trackColor;
+    final resolvedTrackColor = widget.trackColor ==
+            WigglyDefaults.refreshTrackColor
+        ? (_theme?.refreshTrackColor ?? _theme?.trackColor ?? widget.trackColor)
+        : widget.trackColor;
     final resolvedBackgroundColor =
         widget.backgroundColor == WigglyDefaults.refreshBackgroundColor
-            ? (theme?.refreshBackgroundColor ?? widget.backgroundColor)
+            ? (_theme?.refreshBackgroundColor ??
+                _theme?.backgroundColor ??
+                widget.backgroundColor)
             : widget.backgroundColor;
+    final resolvedSize = _resolveScaledValue(
+      value: widget.size,
+      defaultValue: _defaultSize,
+      scale: _theme?.sizeScale,
+    );
+    final resolvedStrokeWidth = _resolveScaledValue(
+      value: widget.strokeWidth,
+      defaultValue: _defaultStrokeWidth,
+      scale: _theme?.strokeWidthScale,
+    );
     final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
 
     return Stack(
@@ -309,8 +354,8 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
                   indeterminate: _refreshing,
                   phase: _phaseAnim,
                   rotation: _rotateAnim,
-                  size: widget.size,
-                  strokeWidth: widget.strokeWidth,
+                  size: resolvedSize,
+                  strokeWidth: resolvedStrokeWidth,
                   wiggleCount: widget.wiggleCount,
                   wiggleAmplitude: resolvedWiggleAmplitude,
                   progressColor: resolvedProgressColor,
@@ -327,13 +372,20 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   }
 
   Duration _effectiveDuration(Duration duration) {
+    final themedDuration = _resolveDuration(
+      value: duration,
+      defaultValue: duration == widget.wiggleDuration
+          ? _defaultWiggleDuration
+          : _defaultRotateDuration,
+    );
+
     if (!_reduceMotion) {
-      return duration;
+      return themedDuration;
     }
 
     return Duration(
       microseconds:
-          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+          (themedDuration.inMicroseconds * _reducedMotionDurationScale).round(),
     );
   }
 
@@ -354,5 +406,35 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
     if (_rotateController.isAnimating) {
       _rotateController.repeat();
     }
+  }
+
+  Duration _resolveDuration({
+    required Duration value,
+    required Duration defaultValue,
+  }) {
+    if (value != defaultValue) {
+      return value;
+    }
+
+    final speedFactor = _theme?.speedFactor;
+    if (speedFactor == null || speedFactor == 1.0) {
+      return value;
+    }
+
+    return Duration(
+      microseconds: (value.inMicroseconds / speedFactor).round(),
+    );
+  }
+
+  double _resolveScaledValue({
+    required double value,
+    required double defaultValue,
+    required double? scale,
+  }) {
+    if (value != defaultValue || scale == null || scale == 1.0) {
+      return value;
+    }
+
+    return value * scale;
   }
 }

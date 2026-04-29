@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_const_constructors_in_immutables
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -20,7 +18,7 @@ import 'wiggly_loaders_theme.dart';
 /// WigglyDotsLoader.indeterminate()
 /// ```
 class WigglyDotsLoader extends StatefulWidget {
-  WigglyDotsLoader({
+  const WigglyDotsLoader({
     super.key,
     required double progress,
     this.dotCount = 3,
@@ -47,7 +45,7 @@ class WigglyDotsLoader extends StatefulWidget {
           'wiggleAmplitude must be at least 0',
         );
 
-  WigglyDotsLoader.indeterminate({
+  const WigglyDotsLoader.indeterminate({
     Key? key,
     int dotCount = 3,
     double dotSize = 8.0,
@@ -75,7 +73,7 @@ class WigglyDotsLoader extends StatefulWidget {
           semanticsValue: semanticsValue,
         );
 
-  WigglyDotsLoader._({
+  const WigglyDotsLoader._({
     super.key,
     required double progress,
     required bool indeterminate,
@@ -90,7 +88,14 @@ class WigglyDotsLoader extends StatefulWidget {
     required this.semanticsLabel,
     required this.semanticsValue,
   })  : _progress = progress,
-        _indeterminate = indeterminate;
+        _indeterminate = indeterminate,
+        assert(dotCount > 0, 'dotCount must be greater than 0'),
+        assert(dotSize > 0.0, 'dotSize must be greater than 0'),
+        assert(spacing >= 0.0, 'spacing must be at least 0'),
+        assert(
+          wiggleAmplitude >= 0.0,
+          'wiggleAmplitude must be at least 0',
+        );
 
   final double _progress;
   final bool _indeterminate;
@@ -112,6 +117,10 @@ class WigglyDotsLoader extends StatefulWidget {
 
 class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
     with TickerProviderStateMixin {
+  static const double _defaultDotSize = 8.0;
+  static const double _defaultSpacing = 6.0;
+  static const Duration _defaultDuration = Duration(milliseconds: 900);
+  static const Duration _defaultEntryDuration = Duration(milliseconds: 420);
   static const double _reducedMotionDurationScale = 1.8;
   static const double _reducedMotionAmplitudeScale = 0.65;
 
@@ -120,7 +129,8 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
   late final Animation<double> _phaseAnim;
   late Animation<double> _travelAnim;
   late final AnimationController _entryController;
-  late final Animation<double> _entryAnim;
+  late Animation<double> _entryAnim;
+  WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
   @override
@@ -146,15 +156,12 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
 
     _entryController = AnimationController(
       vsync: this,
-      duration: _effectiveDuration(const Duration(milliseconds: 420)),
+      duration: _effectiveDuration(_defaultEntryDuration),
     )
       ..addListener(_handleEntryTick)
       ..addStatusListener(_handleEntryStatus);
 
-    _entryAnim = CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOutCubic,
-    );
+    _entryAnim = _buildEntryAnimation();
 
     if (widget.willAnimate) {
       _entryController.forward(from: 0.0);
@@ -172,10 +179,23 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
     super.didChangeDependencies();
     final mediaQuery = MediaQuery.maybeOf(context);
     final nextReduceMotion = mediaQuery?.disableAnimations ?? _reduceMotion;
+    final nextTheme = WigglyLoadersTheme.maybeOf(context);
+    final themeChanged = _theme != nextTheme;
+    final easeChanged = _theme?.ease != nextTheme?.ease;
+    _theme = nextTheme;
 
     if (_reduceMotion != nextReduceMotion) {
       _reduceMotion = nextReduceMotion;
       _applyEffectiveDurations();
+    }
+
+    if (themeChanged) {
+      _applyEffectiveDurations();
+    }
+
+    if (easeChanged) {
+      _entryAnim = _buildEntryAnimation();
+      _travelAnim = _buildTravelAnimation();
     }
   }
 
@@ -239,7 +259,10 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
       begin: -1.0,
       end: widget.dotCount.toDouble(),
     ).animate(
-      CurvedAnimation(parent: _travelController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _travelController,
+        curve: _theme?.ease ?? Curves.easeInOut,
+      ),
     );
   }
 
@@ -256,15 +279,26 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
 
   @override
   Widget build(BuildContext context) {
-    final theme = WigglyLoadersTheme.maybeOf(context);
     final resolvedProgressColor =
         widget.progressColor == WigglyDefaults.dotsProgressColor
-            ? (theme?.dotsProgressColor ?? widget.progressColor)
+            ? (_theme?.dotsProgressColor ??
+                _theme?.progressColor ??
+                widget.progressColor)
             : widget.progressColor;
-    final resolvedTrackColor =
-        widget.trackColor == WigglyDefaults.dotsTrackColor
-            ? (theme?.dotsTrackColor ?? widget.trackColor)
-            : widget.trackColor;
+    final resolvedTrackColor = widget.trackColor ==
+            WigglyDefaults.dotsTrackColor
+        ? (_theme?.dotsTrackColor ?? _theme?.trackColor ?? widget.trackColor)
+        : widget.trackColor;
+    final resolvedDotSize = _resolveScaledValue(
+      value: widget.dotSize,
+      defaultValue: _defaultDotSize,
+      scale: _theme?.sizeScale,
+    );
+    final resolvedSpacing = _resolveScaledValue(
+      value: widget.spacing,
+      defaultValue: _defaultSpacing,
+      scale: _theme?.sizeScale,
+    );
     final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
@@ -288,8 +322,8 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
         phase: _phaseAnim,
         travel: _travelAnim,
         dotCount: widget.dotCount,
-        dotSize: widget.dotSize,
-        spacing: widget.spacing,
+        dotSize: resolvedDotSize,
+        spacing: resolvedSpacing,
         wiggleAmplitude: resolvedWiggleAmplitude,
         progressColor: resolvedProgressColor,
         trackColor: resolvedTrackColor,
@@ -298,13 +332,20 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
   }
 
   Duration _effectiveDuration(Duration duration) {
+    final themedDuration = _resolveDuration(
+      value: duration,
+      defaultValue: duration == widget.duration
+          ? _defaultDuration
+          : _defaultEntryDuration,
+    );
+
     if (!_reduceMotion) {
-      return duration;
+      return themedDuration;
     }
 
     return Duration(
       microseconds:
-          (duration.inMicroseconds * _reducedMotionDurationScale).round(),
+          (themedDuration.inMicroseconds * _reducedMotionDurationScale).round(),
     );
   }
 
@@ -329,7 +370,43 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
       _travelController.repeat();
     }
 
-    _entryController.duration =
-        _effectiveDuration(const Duration(milliseconds: 420));
+    _entryController.duration = _effectiveDuration(_defaultEntryDuration);
+  }
+
+  Animation<double> _buildEntryAnimation() {
+    return CurvedAnimation(
+      parent: _entryController,
+      curve: _theme?.ease ?? Curves.easeOutCubic,
+    );
+  }
+
+  Duration _resolveDuration({
+    required Duration value,
+    required Duration defaultValue,
+  }) {
+    if (value != defaultValue) {
+      return value;
+    }
+
+    final speedFactor = _theme?.speedFactor;
+    if (speedFactor == null || speedFactor == 1.0) {
+      return value;
+    }
+
+    return Duration(
+      microseconds: (value.inMicroseconds / speedFactor).round(),
+    );
+  }
+
+  double _resolveScaledValue({
+    required double value,
+    required double defaultValue,
+    required double? scale,
+  }) {
+    if (value != defaultValue || scale == null || scale == 1.0) {
+      return value;
+    }
+
+    return value * scale;
   }
 }

@@ -66,15 +66,13 @@ class WigglyLoadersExample extends StatelessWidget {
         ),
         extensions: const [
           WigglyLoadersThemeData(
-            loaderProgressColor: accent,
-            loaderTrackColor: accentSoft,
-            linearProgressColor: accent,
-            linearTrackColor: accentSoft,
-            dotsProgressColor: accent,
-            dotsTrackColor: accentSoft,
-            refreshProgressColor: accent,
-            refreshTrackColor: accentSoft,
-            refreshBackgroundColor: Colors.white,
+            progressColor: accent,
+            trackColor: accentSoft,
+            backgroundColor: Colors.white,
+            sizeScale: 1.08,
+            strokeWidthScale: 1.08,
+            speedFactor: 1.05,
+            ease: Curves.easeOutCubic,
           ),
         ],
       ),
@@ -116,7 +114,8 @@ class _DemoPageState extends State<_DemoPage> {
         ),
         child: SafeArea(
           child: MediaQuery(
-            data: mediaQuery.copyWith(disableAnimations: _simulateReducedMotion),
+            data:
+                mediaQuery.copyWith(disableAnimations: _simulateReducedMotion),
             child: WigglyRefreshIndicator(
               onRefresh: _handleRefresh,
               triggerDistance: 90,
@@ -135,7 +134,8 @@ class _DemoPageState extends State<_DemoPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _TopBar(simulateReducedMotion: _simulateReducedMotion),
+                          _TopBar(
+                              simulateReducedMotion: _simulateReducedMotion),
                           const SizedBox(height: 20),
                           _Hero(
                             progress: _progress,
@@ -147,7 +147,7 @@ class _DemoPageState extends State<_DemoPage> {
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final stacked = constraints.maxWidth < 860;
-          
+
                               if (stacked) {
                                 return Column(
                                   children: [
@@ -166,7 +166,7 @@ class _DemoPageState extends State<_DemoPage> {
                                   ],
                                 );
                               }
-          
+
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -354,17 +354,17 @@ class _Hero extends StatelessWidget {
                     semanticsValue: '$progressLabel complete',
                   ),
                   const SizedBox(height: 18),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         'Syncing',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: 10),
                       WigglyDotsLoader.indeterminate(
                         dotCount: 3,
                         dotSize: 8,
@@ -829,7 +829,7 @@ class _MiniDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WigglyDotsLoader.indeterminate(
+    return const WigglyDotsLoader.indeterminate(
       dotCount: 3,
       dotSize: 8,
       spacing: 6,

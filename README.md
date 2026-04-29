@@ -38,7 +38,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.4.0
+  wiggly_loaders: ^0.5.0
 ```
 
 Import:
@@ -147,10 +147,12 @@ MaterialApp(
   theme: ThemeData(
     extensions: const [
       WigglyLoadersThemeData(
-        loaderProgressColor: Color(0xFF0EA5E9),
-        linearProgressColor: Color(0xFF0EA5E9),
-        dotsProgressColor: Color(0xFF0EA5E9),
-        refreshProgressColor: Color(0xFF0EA5E9),
+        progressColor: Color(0xFF0EA5E9),
+        trackColor: Color(0xFFE0F2FE),
+        sizeScale: 1.15,
+        strokeWidthScale: 1.1,
+        speedFactor: 1.2,
+        ease: Curves.easeOutCubic,
       ),
     ],
   ),
@@ -376,17 +378,21 @@ Key knobs: `notificationPredicate`, `triggerDistance`, `maxDragDistance`.
 
 ### Themed loaders via `WigglyLoadersThemeData`
 
-When to use: one visual language across all loaders without repeating colors.
+When to use: one visual language across all loaders without repeating colors,
+size, stroke, and motion settings.
 
 ```dart
 MaterialApp(
   theme: ThemeData(
     extensions: const [
       WigglyLoadersThemeData(
-        loaderProgressColor: Color(0xFF0F766E),
-        linearProgressColor: Color(0xFF0F766E),
-        dotsProgressColor: Color(0xFF0F766E),
-        refreshProgressColor: Color(0xFF0F766E),
+        progressColor: Color(0xFF0F766E),
+        trackColor: Color(0xFFCCFBF1),
+        backgroundColor: Colors.white,
+        sizeScale: 1.1,
+        strokeWidthScale: 1.15,
+        speedFactor: 0.9,
+        ease: Curves.easeInOutCubic,
       ),
     ],
   ),
@@ -394,7 +400,12 @@ MaterialApp(
 )
 ```
 
-Key knobs: `loaderProgressColor`, `linearProgressColor`, `dotsProgressColor`, `refreshProgressColor`.
+Key knobs: `progressColor`, `trackColor`, `backgroundColor`, `sizeScale`,
+`strokeWidthScale`, `speedFactor`, `ease`.
+
+Per-loader overrides still work:
+`loaderProgressColor`, `linearProgressColor`, `dotsProgressColor`,
+`refreshProgressColor`.
 
 ## Package status
 

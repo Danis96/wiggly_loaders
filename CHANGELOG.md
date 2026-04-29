@@ -1,3 +1,11 @@
+## 0.5.0
+
+* Add shared theme tokens to `WigglyLoadersThemeData` for `progressColor`, `trackColor`, `backgroundColor`, `sizeScale`, `strokeWidthScale`, `speedFactor`, and `ease`
+* Apply shared theme styling and motion defaults across `WigglyLoader`, `WigglyLinearLoader`, `WigglyDotsLoader`, and `WigglyRefreshIndicator`
+* Preserve widget-level overrides while allowing theme-driven presets for size, stroke, color, and animation feel
+* Update README and example app to demonstrate the expanded theme engine
+* Add test coverage for shared theme scaling and motion behavior
+
 ## 0.4.0
 
 * Add `WigglyDotsLoader` for compact inline loading and progress states

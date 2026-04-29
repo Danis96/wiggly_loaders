@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class WigglyDefaults {
+  const WigglyDefaults._();
+
   static const Color loaderProgressColor = Color(0xFF3B82F6);
   static const Color loaderTrackColor = Color(0xFFE5E7EB);
 

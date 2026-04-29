@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wiggly_loaders/wiggly_loaders.dart';
+import 'package:wiggly_loaders/src/internal/wiggly_arc_canvas.dart';
 import 'package:wiggly_loaders/src/internal/wiggly_arc_painter.dart';
 import 'package:wiggly_loaders/src/internal/wiggly_dots_painter.dart';
+import 'package:wiggly_loaders/src/internal/wiggly_linear_painter.dart';
 
 void main() {
   group('WigglyLoader', () {
@@ -13,6 +15,21 @@ void main() {
       );
       expect(
         () => WigglyLoader(progress: 1.1),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('asserts when dimensions or timings are invalid', () {
+      expect(
+        () => WigglyLoader(progress: 0.5, size: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyLoader(progress: 0.5, strokeWidth: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyLoader.indeterminate(arcSpan: 1.1),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -132,6 +149,48 @@ void main() {
       expect(painter.progressColor, themedColor);
     });
 
+    testWidgets('applies shared theme tokens for size, stroke, and color',
+        (tester) async {
+      const themedColor = Color(0xFF0F766E);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [
+              WigglyLoadersThemeData(
+                progressColor: themedColor,
+                sizeScale: 1.5,
+                strokeWidthScale: 2.0,
+              ),
+            ],
+          ),
+          home: const Scaffold(
+            body: Center(
+              child: WigglyLoader(progress: 0.5),
+            ),
+          ),
+        ),
+      );
+
+      final sizedBox = tester.widget<SizedBox>(
+        find.descendant(
+          of: find.byType(WigglyArcCanvas),
+          matching: find.byType(SizedBox),
+        ),
+      );
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyArcPainter;
+      expect(sizedBox.width, 108.0);
+      expect(painter.strokeWidth, 9.0);
+      expect(painter.progressColor, themedColor);
+    });
+
     testWidgets('sets default semantics for determinate loader',
         (tester) async {
       await tester.pumpWidget(
@@ -163,6 +222,21 @@ void main() {
       );
       expect(
         () => WigglyLinearLoader(progress: 1.1),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('asserts when geometry is invalid', () {
+      expect(
+        () => WigglyLinearLoader(progress: 0.5, height: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyLinearLoader.indeterminate(segmentFraction: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyLinearLoader.indeterminate(borderRadius: -1),
         throwsA(isA<AssertionError>()),
       );
     });
@@ -243,6 +317,44 @@ void main() {
       );
       expect(widget.willAnimate, isFalse);
     });
+
+    testWidgets('theme ease changes indeterminate slide curve', (tester) async {
+      Future<double> pumpAndReadSlideOffset({
+        WigglyLoadersThemeData? theme,
+      }) async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              extensions: theme == null ? const [] : [theme],
+            ),
+            home: const Scaffold(
+              body: Center(
+                child: WigglyLinearLoader.indeterminate(willAnimate: false),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final customPaint = tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(WigglyLinearLoader),
+            matching: find.byType(CustomPaint),
+          ),
+        );
+
+        return (customPaint.painter! as WigglyLinearPainter).slideOffset;
+      }
+
+      final defaultOffset = await pumpAndReadSlideOffset();
+      final linearOffset = await pumpAndReadSlideOffset(
+        theme: const WigglyLoadersThemeData(ease: Curves.linear),
+      );
+
+      expect(linearOffset, greaterThan(defaultOffset));
+    });
   });
 
   group('WigglyDotsLoader', () {
@@ -274,7 +386,7 @@ void main() {
 
     testWidgets('renders determinate without error', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(child: WigglyDotsLoader(progress: 0.5)),
           ),
@@ -286,7 +398,7 @@ void main() {
 
     testWidgets('renders indeterminate without error', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(child: WigglyDotsLoader.indeterminate()),
           ),
@@ -301,7 +413,7 @@ void main() {
       const key = ValueKey('dots-loader');
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: WigglyDotsLoader.indeterminate(key: key),
@@ -313,7 +425,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: WigglyDotsLoader(
@@ -331,7 +443,7 @@ void main() {
 
     testWidgets('accepts willAnimate false', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: WigglyDotsLoader(
@@ -360,7 +472,7 @@ void main() {
               WigglyLoadersThemeData(dotsProgressColor: themedColor),
             ],
           ),
-          home: Scaffold(
+          home: const Scaffold(
             body: Center(
               child: WigglyDotsLoader(progress: 0.5),
             ),
@@ -379,11 +491,50 @@ void main() {
       expect(painter.progressColor, themedColor);
     });
 
+    testWidgets('shared speed factor speeds up indeterminate dots motion',
+        (tester) async {
+      Future<double> pumpAndReadTravel({
+        WigglyLoadersThemeData? theme,
+      }) async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              extensions: theme == null ? const [] : [theme],
+            ),
+            home: const Scaffold(
+              body: Center(
+                child: WigglyDotsLoader.indeterminate(willAnimate: false),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final customPaint = tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(WigglyDotsLoader),
+            matching: find.byType(CustomPaint),
+          ),
+        );
+
+        return (customPaint.painter! as WigglyDotsPainter).travel;
+      }
+
+      final defaultTravel = await pumpAndReadTravel();
+      final fasterTravel = await pumpAndReadTravel(
+        theme: const WigglyLoadersThemeData(speedFactor: 2.0),
+      );
+
+      expect(fasterTravel, greaterThan(defaultTravel));
+    });
+
     testWidgets('softens wiggle amplitude when reduced motion is enabled',
         (tester) async {
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(disableAnimations: true),
+        const MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
           child: MaterialApp(
             home: Scaffold(
               body: Center(
@@ -412,7 +563,7 @@ void main() {
     testWidgets('sets default semantics for determinate dots loader',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: WigglyDotsLoader(progress: 0.42),
@@ -434,7 +585,7 @@ void main() {
     testWidgets('sets default semantics for indeterminate dots loader',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: WigglyDotsLoader.indeterminate(),
@@ -455,6 +606,34 @@ void main() {
   });
 
   group('WigglyRefreshIndicator', () {
+    test('asserts when refresh configuration is invalid', () {
+      expect(
+        () => WigglyRefreshIndicator(
+          onRefresh: () async {},
+          triggerDistance: 0,
+          child: const SizedBox(),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyRefreshIndicator(
+          onRefresh: () async {},
+          triggerDistance: 80,
+          maxDragDistance: 40,
+          child: const SizedBox(),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglyRefreshIndicator(
+          onRefresh: () async {},
+          arcSpan: 1.2,
+          child: const SizedBox(),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
     testWidgets('renders child and wraps scrollable', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
