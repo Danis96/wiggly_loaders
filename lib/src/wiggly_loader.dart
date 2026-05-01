@@ -35,6 +35,8 @@ class WigglyLoader extends StatefulWidget {
     this.child,
     this.semanticsLabel,
     this.semanticsValue,
+    this.onComplete,
+    this.completeDuration = const Duration(milliseconds: 450),
   })  : _progress = progress,
         _indeterminate = false,
         assert(
@@ -86,6 +88,8 @@ class WigglyLoader extends StatefulWidget {
           child: child,
           semanticsLabel: semanticsLabel,
           semanticsValue: semanticsValue,
+          onComplete: null,
+          completeDuration: const Duration(milliseconds: 450),
         );
 
   const WigglyLoader._({
@@ -105,6 +109,8 @@ class WigglyLoader extends StatefulWidget {
     required this.child,
     required this.semanticsLabel,
     required this.semanticsValue,
+    required this.onComplete,
+    required this.completeDuration,
   })  : _progress = progress,
         _indeterminate = indeterminate,
         assert(size > 0.0, 'size must be greater than 0'),
@@ -162,6 +168,12 @@ class WigglyLoader extends StatefulWidget {
   /// Optional semantic value for assistive technologies.
   final String? semanticsValue;
 
+  /// Called once after the burst animation finishes when [progress] reaches `1.0`.
+  final VoidCallback? onComplete;
+
+  /// Duration of the burst animation played when [progress] reaches `1.0`.
+  final Duration completeDuration;
+
   @override
   State<WigglyLoader> createState() => _WigglyLoaderState();
 }
@@ -182,6 +194,8 @@ class _WigglyLoaderState extends State<WigglyLoader>
   late final Animation<double> _rotateAnim;
   late final AnimationController _entryController;
   late Animation<double> _entryAnim;
+  late final AnimationController _burstController;
+  double _burstMultiplier = 1.0;
   WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
@@ -227,6 +241,13 @@ class _WigglyLoaderState extends State<WigglyLoader>
     if (widget._indeterminate && !widget.willAnimate) {
       _rotateController.repeat();
     }
+
+    _burstController = AnimationController(
+      vsync: this,
+      duration: widget.completeDuration,
+    )
+      ..addListener(_handleBurstTick)
+      ..addStatusListener(_handleBurstStatus);
   }
 
   @override
@@ -265,6 +286,22 @@ class _WigglyLoaderState extends State<WigglyLoader>
     }
   }
 
+  void _handleBurstTick() {
+    if (mounted) {
+      setState(() {
+        _burstMultiplier =
+            1.0 + 1.5 * math.sin(_burstController.value * math.pi);
+      });
+    }
+  }
+
+  void _handleBurstStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      setState(() => _burstMultiplier = 1.0);
+      widget.onComplete?.call();
+    }
+  }
+
   @override
   void didUpdateWidget(covariant WigglyLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -286,6 +323,20 @@ class _WigglyLoaderState extends State<WigglyLoader>
     if (oldWidget.wiggleDuration != widget.wiggleDuration ||
         oldWidget.rotateDuration != widget.rotateDuration) {
       _applyEffectiveDurations();
+    }
+
+    if (oldWidget.completeDuration != widget.completeDuration) {
+      _burstController.duration = widget.completeDuration;
+    }
+
+    if (!widget._indeterminate &&
+        oldWidget._progress < 1.0 &&
+        widget._progress >= 1.0) {
+      if (_reduceMotion) {
+        widget.onComplete?.call();
+      } else {
+        _burstController.forward(from: 0.0);
+      }
     }
 
     if (oldWidget._indeterminate != widget._indeterminate) {
@@ -313,6 +364,10 @@ class _WigglyLoaderState extends State<WigglyLoader>
       ..removeListener(_handleEntryTick)
       ..removeStatusListener(_handleEntryStatus)
       ..dispose();
+    _burstController
+      ..removeListener(_handleBurstTick)
+      ..removeStatusListener(_handleBurstStatus)
+      ..dispose();
     super.dispose();
   }
 
@@ -338,7 +393,8 @@ class _WigglyLoaderState extends State<WigglyLoader>
       defaultValue: _defaultStrokeWidth,
       scale: _theme?.strokeWidthScale,
     );
-    final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
+    final resolvedWiggleAmplitude =
+        _effectiveAmplitude(widget.wiggleAmplitude) * _burstMultiplier;
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
         widget.willAnimate &&

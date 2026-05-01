@@ -212,6 +212,138 @@ void main() {
       expect(semantics.properties.label, 'Loading progress');
       expect(semantics.properties.value, '42 percent');
     });
+
+    testWidgets('calls onComplete when progress reaches 1.0', (tester) async {
+      var callCount = 0;
+      const key = ValueKey('loader-complete');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 0.8,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 1.0,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(callCount, 1);
+    });
+
+    testWidgets('does not call onComplete on intermediate progress updates',
+        (tester) async {
+      var callCount = 0;
+      const key = ValueKey('loader-no-complete');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 0.3,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 0.7,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(callCount, 0);
+    });
+
+    testWidgets('burst raises wiggle amplitude during completion animation',
+        (tester) async {
+      const key = ValueKey('loader-burst');
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 0.9,
+                willAnimate: false,
+                completeDuration: Duration(milliseconds: 400),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      double amplitudeAtRest() {
+        final customPaint = tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(WigglyLoader),
+            matching: find.byType(CustomPaint),
+          ),
+        );
+        return (customPaint.painter! as WigglyArcPainter).wiggleAmplitude;
+      }
+
+      final beforeBurst = amplitudeAtRest();
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                key: key,
+                progress: 1.0,
+                willAnimate: false,
+                completeDuration: Duration(milliseconds: 400),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 200));
+      final duringBurst = amplitudeAtRest();
+      expect(duringBurst, greaterThan(beforeBurst));
+
+      await tester.pump(const Duration(milliseconds: 300));
+      final afterBurst = amplitudeAtRest();
+      expect(afterBurst, closeTo(beforeBurst, 0.01));
+    });
   });
 
   group('WigglyLinearLoader', () {
@@ -316,6 +448,44 @@ void main() {
         find.byType(WigglyLinearLoader),
       );
       expect(widget.willAnimate, isFalse);
+    });
+
+    testWidgets('calls onComplete when progress reaches 1.0', (tester) async {
+      var callCount = 0;
+      const key = ValueKey('linear-complete');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLinearLoader(
+                key: key,
+                progress: 0.5,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLinearLoader(
+                key: key,
+                progress: 1.0,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(callCount, 1);
     });
 
     testWidgets('theme ease changes indeterminate slide curve', (tester) async {
@@ -602,6 +772,44 @@ void main() {
       );
       expect(semantics.properties.label, 'Loading');
       expect(semantics.properties.value, isNull);
+    });
+
+    testWidgets('calls onComplete when progress reaches 1.0', (tester) async {
+      var callCount = 0;
+      const key = ValueKey('dots-complete');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyDotsLoader(
+                key: key,
+                progress: 0.6,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyDotsLoader(
+                key: key,
+                progress: 1.0,
+                willAnimate: false,
+                onComplete: () => callCount++,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(callCount, 1);
     });
   });
 

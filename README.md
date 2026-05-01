@@ -38,7 +38,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.5.0
+  wiggly_loaders: ^0.6.0
 ```
 
 Import:
@@ -196,6 +196,8 @@ flutter run -d ios
 | `willAnimate`     | `true`              | Intro animation when widget appears              |
 | `semanticsLabel`  | auto                | Accessibility label                              |
 | `semanticsValue`  | auto                | Accessibility value                              |
+| `onComplete`      | `null`              | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration`| `450ms`             | Duration of the burst animation                  |
 
 ### WigglyLoader only
 
@@ -220,6 +222,8 @@ flutter run -d ios
 | `willAnimate`     | `true`     | Intro animation when widget appears              |
 | `semanticsLabel`  | auto       | Accessibility label                              |
 | `semanticsValue`  | auto       | Accessibility value                              |
+| `onComplete`      | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration`| `450ms`    | Duration of the burst animation                  |
 
 ### WigglyDotsLoader
 
@@ -236,6 +240,8 @@ flutter run -d ios
 | `willAnimate`     | `true`     | Intro animation when widget appears              |
 | `semanticsLabel`  | auto       | Accessibility label                              |
 | `semanticsValue`  | auto       | Accessibility value                              |
+| `onComplete`      | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration`| `450ms`    | Duration of the burst animation                  |
 
 ### WigglyRefreshIndicator only
 
@@ -375,6 +381,30 @@ WigglyRefreshIndicator(
 ```
 
 Key knobs: `notificationPredicate`, `triggerDistance`, `maxDragDistance`.
+
+### Completion burst with onComplete callback
+
+When to use: show a success indicator or navigate away once progress finishes.
+
+```dart
+WigglyLoader(
+  progress: _uploadProgress,
+  onComplete: () {
+    setState(() => _showSuccess = true);
+  },
+)
+```
+
+Works the same on `WigglyLinearLoader` and `WigglyDotsLoader`:
+
+```dart
+WigglyLinearLoader(
+  progress: _progress,
+  onComplete: _navigateToNextStep,
+)
+```
+
+Key knobs: `completeDuration` (burst length), `wiggleAmplitude` (baseline amplitude the burst scales from).
 
 ### Themed loaders via `WigglyLoadersThemeData`
 
