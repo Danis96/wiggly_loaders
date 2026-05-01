@@ -34,6 +34,8 @@ class WigglyLinearLoader extends StatefulWidget {
     this.willAnimate = true,
     this.semanticsLabel,
     this.semanticsValue,
+    this.onComplete,
+    this.completeDuration = const Duration(milliseconds: 450),
   })  : _progress = progress,
         _indeterminate = false,
         assert(
@@ -83,6 +85,8 @@ class WigglyLinearLoader extends StatefulWidget {
           willAnimate: willAnimate,
           semanticsLabel: semanticsLabel,
           semanticsValue: semanticsValue,
+          onComplete: null,
+          completeDuration: const Duration(milliseconds: 450),
         );
 
   const WigglyLinearLoader._({
@@ -101,6 +105,8 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.willAnimate,
     required this.semanticsLabel,
     required this.semanticsValue,
+    required this.onComplete,
+    required this.completeDuration,
   })  : _progress = progress,
         _indeterminate = indeterminate,
         assert(height > 0.0, 'height must be greater than 0'),
@@ -154,6 +160,12 @@ class WigglyLinearLoader extends StatefulWidget {
   /// Optional semantic value for assistive technologies.
   final String? semanticsValue;
 
+  /// Called once after the burst animation finishes when [progress] reaches `1.0`.
+  final VoidCallback? onComplete;
+
+  /// Duration of the burst animation played when [progress] reaches `1.0`.
+  final Duration completeDuration;
+
   @override
   State<WigglyLinearLoader> createState() => _WigglyLinearLoaderState();
 }
@@ -173,6 +185,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   late Animation<double> _slideAnim;
   late final AnimationController _entryController;
   late Animation<double> _entryAnim;
+  late final AnimationController _burstController;
+  double _burstMultiplier = 1.0;
   WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
@@ -216,6 +230,13 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     if (widget._indeterminate && !widget.willAnimate) {
       _slideController.repeat();
     }
+
+    _burstController = AnimationController(
+      vsync: this,
+      duration: widget.completeDuration,
+    )
+      ..addListener(_handleBurstTick)
+      ..addStatusListener(_handleBurstStatus);
   }
 
   @override
@@ -267,6 +288,22 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     }
   }
 
+  void _handleBurstTick() {
+    if (mounted) {
+      setState(() {
+        _burstMultiplier =
+            1.0 + 1.5 * math.sin(_burstController.value * math.pi);
+      });
+    }
+  }
+
+  void _handleBurstStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      setState(() => _burstMultiplier = 1.0);
+      widget.onComplete?.call();
+    }
+  }
+
   @override
   void didUpdateWidget(covariant WigglyLinearLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -288,6 +325,20 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     if (oldWidget.wiggleDuration != widget.wiggleDuration ||
         oldWidget.slideDuration != widget.slideDuration) {
       _applyEffectiveDurations();
+    }
+
+    if (oldWidget.completeDuration != widget.completeDuration) {
+      _burstController.duration = widget.completeDuration;
+    }
+
+    if (!widget._indeterminate &&
+        oldWidget._progress < 1.0 &&
+        widget._progress >= 1.0) {
+      if (_reduceMotion) {
+        widget.onComplete?.call();
+      } else {
+        _burstController.forward(from: 0.0);
+      }
     }
 
     if (oldWidget._indeterminate != widget._indeterminate ||
@@ -318,6 +369,10 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       ..removeListener(_handleEntryTick)
       ..removeStatusListener(_handleEntryStatus)
       ..dispose();
+    _burstController
+      ..removeListener(_handleBurstTick)
+      ..removeStatusListener(_handleBurstStatus)
+      ..dispose();
     super.dispose();
   }
 
@@ -338,7 +393,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       defaultValue: _defaultHeight,
       scale: _theme?.sizeScale,
     );
-    final resolvedWiggleAmplitude = _effectiveAmplitude(widget.wiggleAmplitude);
+    final resolvedWiggleAmplitude =
+        _effectiveAmplitude(widget.wiggleAmplitude) * _burstMultiplier;
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
     final showIndeterminateIntro = widget._indeterminate &&
         widget.willAnimate &&

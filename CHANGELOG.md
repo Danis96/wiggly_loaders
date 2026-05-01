@@ -1,3 +1,10 @@
+## 0.6.0
+
+* Add `onComplete` callback to `WigglyLoader`, `WigglyLinearLoader`, and `WigglyDotsLoader` — fired once after the burst animation finishes when `progress` reaches `1.0`
+* Add `completeDuration` parameter (default `450ms`) to control the burst animation length
+* Burst effect: wiggle amplitude spikes to ×2.5 at the midpoint then elastically returns to baseline
+* Reduced-motion mode skips the burst animation and calls `onComplete` directly
+
 ## 0.5.0
 
 * Add shared theme tokens to `WigglyLoadersThemeData` for `progressColor`, `trackColor`, `backgroundColor`, `sizeScale`, `strokeWidthScale`, `speedFactor`, and `ease`
