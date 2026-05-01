@@ -14,6 +14,7 @@ class WigglyArcCanvas extends StatelessWidget {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.arcSpan,
     this.child,
@@ -29,6 +30,7 @@ class WigglyArcCanvas extends StatelessWidget {
   final int wiggleCount;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final double arcSpan;
   final Widget? child;
@@ -52,6 +54,7 @@ class WigglyArcCanvas extends StatelessWidget {
               wiggleCount: wiggleCount,
               wiggleAmplitude: wiggleAmplitude,
               progressColor: progressColor,
+              progressEndColor: progressEndColor,
               trackColor: trackColor,
               arcSpan: arcSpan,
               trackStrokeCap: trackStrokeCap,

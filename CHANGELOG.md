@@ -4,6 +4,10 @@
 * Add `completeDuration` parameter (default `450ms`) to control the burst animation length
 * Burst effect: wiggle amplitude spikes to ×2.5 at the midpoint then elastically returns to baseline
 * Reduced-motion mode skips the burst animation and calls `onComplete` directly
+* Add optional `progressEndColor` to `WigglyLoader`, `WigglyLinearLoader`, `WigglyDotsLoader`, and `WigglyRefreshIndicator`
+* Render gradient interpolation across arc and linear progress strokes with shader-based painting
+* Interpolate active dot color from start to end across the row for determinate and indeterminate dots
+* Update README, example app, and API docs to show gradient styling across all loader variants
 
 ## 0.5.0
 

@@ -13,6 +13,7 @@ class WigglyLinearCanvas extends StatelessWidget {
     required this.slideOffset,
     required this.wiggleCount,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.segmentFraction,
     required this.borderRadius,
@@ -26,6 +27,7 @@ class WigglyLinearCanvas extends StatelessWidget {
   final Animation<double> slideOffset;
   final int wiggleCount;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final double segmentFraction;
   final double borderRadius;
@@ -50,6 +52,7 @@ class WigglyLinearCanvas extends StatelessWidget {
               wiggleCount: wiggleCount,
               wiggleAmplitude: wiggleAmplitude,
               progressColor: progressColor,
+              progressEndColor: progressEndColor,
               trackColor: trackColor,
               segmentFraction: segmentFraction,
               borderRadius: borderRadius,

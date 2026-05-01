@@ -49,6 +49,7 @@ class WigglyRefreshIndicator extends StatefulWidget {
     this.wiggleCount = 14,
     this.wiggleAmplitude = 3.5,
     this.progressColor = WigglyDefaults.refreshProgressColor,
+    this.progressEndColor,
     this.trackColor = WigglyDefaults.refreshTrackColor,
     this.backgroundColor = WigglyDefaults.refreshBackgroundColor,
     this.wiggleDuration = const Duration(milliseconds: 1200),
@@ -109,8 +110,13 @@ class WigglyRefreshIndicator extends StatefulWidget {
   /// Amplitude of the wiggle in logical pixels.
   final double wiggleAmplitude;
 
-  /// Color of the wiggly arc.
+  /// Start color of the wiggly arc.
   final Color progressColor;
+
+  /// Optional end color for gradient interpolation across the arc.
+  ///
+  /// Defaults to [progressColor] for a flat stroke.
+  final Color? progressEndColor;
 
   /// Color of the background track ring.
   final Color trackColor;
@@ -308,6 +314,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
                 _theme?.progressColor ??
                 widget.progressColor)
             : widget.progressColor;
+    final resolvedProgressEndColor = widget.progressEndColor;
     final resolvedTrackColor = widget.trackColor ==
             WigglyDefaults.refreshTrackColor
         ? (_theme?.refreshTrackColor ?? _theme?.trackColor ?? widget.trackColor)
@@ -359,6 +366,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
                   wiggleCount: widget.wiggleCount,
                   wiggleAmplitude: resolvedWiggleAmplitude,
                   progressColor: resolvedProgressColor,
+                  progressEndColor: resolvedProgressEndColor,
                   trackColor: resolvedTrackColor,
                   backgroundColor: resolvedBackgroundColor,
                   arcSpan: widget.arcSpan,

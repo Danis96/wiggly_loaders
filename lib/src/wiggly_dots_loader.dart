@@ -26,6 +26,7 @@ class WigglyDotsLoader extends StatefulWidget {
     this.spacing = 6.0,
     this.wiggleAmplitude = 2.5,
     this.progressColor = WigglyDefaults.dotsProgressColor,
+    this.progressEndColor,
     this.trackColor = WigglyDefaults.dotsTrackColor,
     this.duration = const Duration(milliseconds: 900),
     this.willAnimate = true,
@@ -54,6 +55,7 @@ class WigglyDotsLoader extends StatefulWidget {
     double spacing = 6.0,
     double wiggleAmplitude = 2.5,
     Color progressColor = WigglyDefaults.dotsProgressColor,
+    Color? progressEndColor,
     Color trackColor = WigglyDefaults.dotsTrackColor,
     Duration duration = const Duration(milliseconds: 900),
     bool willAnimate = true,
@@ -68,6 +70,7 @@ class WigglyDotsLoader extends StatefulWidget {
           spacing: spacing,
           wiggleAmplitude: wiggleAmplitude,
           progressColor: progressColor,
+          progressEndColor: progressEndColor,
           trackColor: trackColor,
           duration: duration,
           willAnimate: willAnimate,
@@ -86,6 +89,7 @@ class WigglyDotsLoader extends StatefulWidget {
     required this.spacing,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.duration,
     required this.willAnimate,
@@ -111,6 +115,7 @@ class WigglyDotsLoader extends StatefulWidget {
   final double spacing;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final Duration duration;
   final bool willAnimate;
@@ -340,6 +345,7 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
                 _theme?.progressColor ??
                 widget.progressColor)
             : widget.progressColor;
+    final resolvedProgressEndColor = widget.progressEndColor;
     final resolvedTrackColor = widget.trackColor ==
             WigglyDefaults.dotsTrackColor
         ? (_theme?.dotsTrackColor ?? _theme?.trackColor ?? widget.trackColor)
@@ -382,6 +388,7 @@ class _WigglyDotsLoaderState extends State<WigglyDotsLoader>
         spacing: resolvedSpacing,
         wiggleAmplitude: resolvedWiggleAmplitude,
         progressColor: resolvedProgressColor,
+        progressEndColor: resolvedProgressEndColor,
         trackColor: resolvedTrackColor,
       ),
     );

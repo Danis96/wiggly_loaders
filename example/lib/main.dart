@@ -337,6 +337,7 @@ class _Hero extends StatelessWidget {
                     progress: progress,
                     size: 110,
                     strokeWidth: 5,
+                    progressEndColor: const Color(0xFF2563EB),
                     child: Text(
                       progressLabel,
                       style: const TextStyle(
@@ -350,6 +351,7 @@ class _Hero extends StatelessWidget {
                   WigglyLinearLoader(
                     progress: progress,
                     height: 10,
+                    progressEndColor: const Color(0xFF2563EB),
                     semanticsLabel: 'Preview progress',
                     semanticsValue: '$progressLabel complete',
                   ),
@@ -484,6 +486,7 @@ class _LoaderGrid extends StatelessWidget {
             child: WigglyLoader(
               progress: progress,
               size: 88,
+              progressEndColor: const Color(0xFF2563EB),
               child: Text(
                 '${(progress * 100).round()}%',
                 style: const TextStyle(
@@ -513,6 +516,7 @@ class _LoaderGrid extends StatelessWidget {
                 dotCount: 5,
                 dotSize: 10,
                 spacing: 8,
+                progressEndColor: const Color(0xFF2563EB),
                 semanticsLabel: 'Preparing assets',
                 semanticsValue: '${(progress * 100).round()} percent',
               ),
@@ -529,6 +533,7 @@ class _LoaderGrid extends StatelessWidget {
               WigglyLinearLoader(
                 progress: progress,
                 height: 10,
+                progressEndColor: const Color(0xFF2563EB),
                 semanticsLabel: 'Transfer progress',
                 semanticsValue: '${(progress * 100).round()} percent',
               ),

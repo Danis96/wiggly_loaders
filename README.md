@@ -1,24 +1,21 @@
 # wiggly_loaders
 
-A collection of smooth, customizable wiggly loading indicators for Flutter. Package ships circular, linear, compact dot, and pull-to-refresh variants.
+A collection of smooth, customizable wiggly loading indicators for Flutter. Package ships circular, linear, compact dot, and pull-to-refresh variants, including optional gradient progress fills.
 
 ## Preview
-
-Demo video:
-
-- [giphy_wiggly.mp4](assets/readme/giphy_wiggly.mp4)
 
 Screenshots:
 
 | Android                                       | iOS                                    |
 |-----------------------------------------------|----------------------------------------|
-| ![Android demo 1](assets/readme/android1.png) | ![iOS demo 1](assets/readme/ios1.jpeg) |
-| ![Android demo 2](assets/readme/android2.png) | ![iOS demo 2](assets/readme/ios2.jpeg) |
+| ![Android demo 1](assets/readme/android1.jpg) | ![iOS demo 1](assets/readme/ios1.jpeg) |
+| ![Android demo 2](assets/readme/android2.jpg) | ![iOS demo 2](assets/readme/ios2.jpeg) |
 
 ## Why use it
 
 - Same visual language across loader, progress bar, and refresh UI
 - Determinate and indeterminate modes
+- Optional color interpolation across arcs, bars, and dots
 - Pure Flutter `CustomPainter`, no third-party runtime deps
 - Tunable wave count, amplitude, colors, timing, and sizing
 - Example app included
@@ -64,6 +61,7 @@ WigglyLoader(
   size: 80,
   strokeWidth: 5,
   progressColor: Colors.teal,
+  progressEndColor: Colors.cyan,
   trackColor: Colors.teal.shade50,
   wiggleCount: 12,
   wiggleAmplitude: 4.0,
@@ -86,6 +84,7 @@ WigglyLinearLoader(
   height: 8,
   wiggleCount: 6,
   progressColor: Colors.deepPurple,
+  progressEndColor: Colors.pinkAccent,
   trackColor: Colors.deepPurple.shade50,
   borderRadius: 4,
 )
@@ -108,6 +107,7 @@ WigglyDotsLoader(
   spacing: 8,
   wiggleAmplitude: 3,
   progressColor: Colors.teal,
+  progressEndColor: Colors.cyan,
   trackColor: Colors.teal.shade50,
 )
 ```
@@ -130,6 +130,7 @@ WigglyRefreshIndicator(
 WigglyRefreshIndicator(
   onRefresh: _handleRefresh,
   progressColor: Colors.orange,
+  progressEndColor: Colors.deepOrange,
   trackColor: Colors.orange.shade50,
   backgroundColor: Colors.white,
   size: 56,
@@ -181,86 +182,92 @@ flutter run -d ios
 
 ### WigglyLoader and WigglyRefreshIndicator
 
-| Parameter         | Default             | Description                                      |
-|-------------------|---------------------|--------------------------------------------------|
-| `progress`        | required            | Progress from `0.0` to `1.0` in determinate mode |
-| `size`            | `72.0` / `52.0`     | Loader diameter                                  |
-| `strokeWidth`     | `4.5` / `4.0`       | Arc and track stroke width                       |
-| `wiggleCount`     | `14`                | Number of wiggle cycles around arc               |
-| `wiggleAmplitude` | `3.5`               | Wiggle size in logical pixels                    |
-| `progressColor`   | blue                | Foreground arc color                             |
-| `trackColor`      | light gray          | Background ring color                            |
-| `wiggleDuration`  | `1200ms`            | Wiggle animation speed                           |
-| `rotateDuration`  | `1600ms` / `1500ms` | Spin speed                                       |
-| `arcSpan`         | `0.7`               | Fraction of circle used by indeterminate arc     |
-| `willAnimate`     | `true`              | Intro animation when widget appears              |
-| `semanticsLabel`  | auto                | Accessibility label                              |
-| `semanticsValue`  | auto                | Accessibility value                              |
-| `onComplete`      | `null`              | Callback fired after burst animation when `progress` reaches `1.0` |
-| `completeDuration`| `450ms`             | Duration of the burst animation                  |
-
+| Parameter          | Default                 | Description                                                        |
+|--------------------|-------------------------|--------------------------------------------------------------------|
+| `progress`         | required                | Progress from `0.0` to `1.0` in determinate mode                   |
+| `size`             | `72.0` / `52.0`         | Loader diameter                                                    |
+| `strokeWidth`      | `4.5` / `4.0`           | Arc and track stroke width                                         |
+| `wiggleCount`      | `14`                    | Number of wiggle cycles around arc                                 |
+| `wiggleAmplitude`  | `3.5`                   | Wiggle size in logical pixels                                      |
+| `progressColor`    | blue                    | Foreground arc color                                               |
+| `progressEndColor` | same as `progressColor` | Optional gradient end color for the arc                            |
+| `trackColor`       | light gray              | Background ring color                                              |
+| `wiggleDuration`   | `1200ms`                | Wiggle animation speed                                             |
+| `rotateDuration`   | `1600ms` / `1500ms`     | Spin speed                                                         |
+| `arcSpan`          | `0.7`                   | Fraction of circle used by indeterminate arc                       |
+| `willAnimate`      | `true`                  | Intro animation when widget appears                                |
+| `semanticsLabel`   | auto                    | Accessibility label                                                |
+| `semanticsValue`   | auto                    | Accessibility value                                                |
 ### WigglyLoader only
 
-| Parameter | Default | Description               |
-|-----------|---------|---------------------------|
-| `child`   | `null`  | Widget rendered in center |
+| Parameter          | Default                 | Description                                                        |
+|--------------------|-------------------------|--------------------------------------------------------------------|
+| `child`            | `null`                  | Widget rendered in center                                          |
+| `onComplete`       | `null`                  | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration` | `450ms`                 | Duration of the burst animation                                    |
 
 ### WigglyLinearLoader
 
-| Parameter         | Default    | Description                                      |
-|-------------------|------------|--------------------------------------------------|
-| `progress`        | required   | Progress from `0.0` to `1.0` in determinate mode |
-| `height`          | `6.0`      | Track height                                     |
-| `wiggleCount`     | `8`        | Wiggle cycles across full width                  |
-| `wiggleAmplitude` | `2.5`      | Vertical wiggle size                             |
-| `progressColor`   | blue       | Foreground bar color                             |
-| `trackColor`      | light gray | Background track color                           |
-| `wiggleDuration`  | `1000ms`   | Wiggle animation speed                           |
-| `slideDuration`   | `1400ms`   | Indeterminate slide speed                        |
-| `segmentFraction` | `0.45`     | Width of sliding segment                         |
-| `borderRadius`    | `99.0`     | Track corner radius                              |
-| `willAnimate`     | `true`     | Intro animation when widget appears              |
-| `semanticsLabel`  | auto       | Accessibility label                              |
-| `semanticsValue`  | auto       | Accessibility value                              |
-| `onComplete`      | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
-| `completeDuration`| `450ms`    | Duration of the burst animation                  |
+| Parameter          | Default    | Description                                                        |
+|--------------------|------------|--------------------------------------------------------------------|
+| `progress`         | required   | Progress from `0.0` to `1.0` in determinate mode                   |
+| `height`           | `6.0`      | Track height                                                       |
+| `wiggleCount`      | `8`        | Wiggle cycles across full width                                    |
+| `wiggleAmplitude`  | `2.5`      | Vertical wiggle size                                               |
+| `progressColor`    | blue       | Foreground bar color                                               |
+| `progressEndColor` | same as `progressColor` | Optional gradient end color for the filled segment     |
+| `trackColor`       | light gray | Background track color                                             |
+| `wiggleDuration`   | `1000ms`   | Wiggle animation speed                                             |
+| `slideDuration`    | `1400ms`   | Indeterminate slide speed                                          |
+| `segmentFraction`  | `0.45`     | Width of sliding segment                                           |
+| `borderRadius`     | `99.0`     | Track corner radius                                                |
+| `willAnimate`      | `true`     | Intro animation when widget appears                                |
+| `semanticsLabel`   | auto       | Accessibility label                                                |
+| `semanticsValue`   | auto       | Accessibility value                                                |
+| `onComplete`       | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration` | `450ms`    | Duration of the burst animation                                    |
 
 ### WigglyDotsLoader
 
-| Parameter         | Default    | Description                                      |
-|-------------------|------------|--------------------------------------------------|
-| `progress`        | required   | Progress from `0.0` to `1.0` in determinate mode |
-| `dotCount`        | `3`        | Number of dots in the row                        |
-| `dotSize`         | `8.0`      | Diameter of each dot                             |
-| `spacing`         | `6.0`      | Gap between dots                                 |
-| `wiggleAmplitude` | `2.5`      | Vertical wiggle size                             |
-| `progressColor`   | blue       | Active dot color                                 |
-| `trackColor`      | light gray | Inactive dot color                               |
-| `duration`        | `900ms`    | Wiggle/travel speed                              |
-| `willAnimate`     | `true`     | Intro animation when widget appears              |
-| `semanticsLabel`  | auto       | Accessibility label                              |
-| `semanticsValue`  | auto       | Accessibility value                              |
-| `onComplete`      | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
-| `completeDuration`| `450ms`    | Duration of the burst animation                  |
+| Parameter          | Default    | Description                                                        |
+|--------------------|------------|--------------------------------------------------------------------|
+| `progress`         | required   | Progress from `0.0` to `1.0` in determinate mode                   |
+| `dotCount`         | `3`        | Number of dots in the row                                          |
+| `dotSize`          | `8.0`      | Diameter of each dot                                               |
+| `spacing`          | `6.0`      | Gap between dots                                                   |
+| `wiggleAmplitude`  | `2.5`      | Vertical wiggle size                                               |
+| `progressColor`    | blue       | Active dot color                                                   |
+| `progressEndColor` | same as `progressColor` | Optional gradient end color across active dots        |
+| `trackColor`       | light gray | Inactive dot color                                                 |
+| `duration`         | `900ms`    | Wiggle/travel speed                                                |
+| `willAnimate`      | `true`     | Intro animation when widget appears                                |
+| `semanticsLabel`   | auto       | Accessibility label                                                |
+| `semanticsValue`   | auto       | Accessibility value                                                |
+| `onComplete`       | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration` | `450ms`    | Duration of the burst animation                                    |
 
 ### WigglyRefreshIndicator only
 
-| Parameter         | Default  | Description                         |
-|-------------------|----------|-------------------------------------|
-| `onRefresh`       | required | Async callback fired on refresh     |
-| `child`           | required | Wrapped scrollable                  |
-| `displacement`    | `50.0`   | Resting top offset while refreshing |
-| `triggerDistance` | `80.0`   | Drag distance needed to trigger     |
-| `maxDragDistance` | `120.0`  | Max tracked pull distance           |
-| `notificationPredicate` | default | Notification filter for nested scrolls |
-| `backgroundColor` | white    | Badge background                    |
-| `elevation`       | `2.0`    | Badge shadow elevation              |
-| `semanticsLabel`  | `Pull to refresh` | Accessibility label         |
+| Parameter               | Default                 | Description                            |
+|-------------------------|-------------------------|----------------------------------------|
+| `onRefresh`             | required                | Async callback fired on refresh        |
+| `child`                 | required                | Wrapped scrollable                     |
+| `displacement`          | `50.0`                  | Resting top offset while refreshing    |
+| `triggerDistance`       | `80.0`                  | Drag distance needed to trigger        |
+| `maxDragDistance`       | `120.0`                 | Max tracked pull distance              |
+| `notificationPredicate` | default                 | Notification filter for nested scrolls |
+| `backgroundColor`       | white                   | Badge background                       |
+| `progressEndColor`      | same as `progressColor` | Optional gradient end color            |
+| `elevation`             | `2.0`                   | Badge shadow elevation                 |
+| `semanticsLabel`        | `Pull to refresh`       | Accessibility label                    |
 
 ## Behavior notes
 
 - Determinate constructors assert `progress` stays inside `0.0..1.0`
 - With `willAnimate: true`, loaders animate in from `0` each time mounted
+- `WigglyLoader` and `WigglyRefreshIndicator` can interpolate arc color from `progressColor` to `progressEndColor`
+- `WigglyLinearLoader` can interpolate color across the filled bar or sliding segment
+- `WigglyDotsLoader` can interpolate active dot color across the row
 - `WigglyLinearLoader` keeps wave phase anchored to full width so pattern does not jump while segment slides
 - `WigglyDotsLoader` uses the same wiggly phase in both modes, with determinate fill or a traveling highlighted cluster
 - `WigglyRefreshIndicator` switches from pull progress to indeterminate spin until `onRefresh` completes

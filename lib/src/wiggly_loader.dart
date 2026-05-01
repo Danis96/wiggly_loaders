@@ -27,6 +27,7 @@ class WigglyLoader extends StatefulWidget {
     this.wiggleCount = 14,
     this.wiggleAmplitude = 3.5,
     this.progressColor = WigglyDefaults.loaderProgressColor,
+    this.progressEndColor,
     this.trackColor = WigglyDefaults.loaderTrackColor,
     this.wiggleDuration = const Duration(milliseconds: 1200),
     this.rotateDuration = const Duration(milliseconds: 1600),
@@ -63,6 +64,7 @@ class WigglyLoader extends StatefulWidget {
     int wiggleCount = 14,
     double wiggleAmplitude = 3.5,
     Color progressColor = WigglyDefaults.loaderProgressColor,
+    Color? progressEndColor,
     Color trackColor = WigglyDefaults.loaderTrackColor,
     Duration wiggleDuration = const Duration(milliseconds: 1200),
     Duration rotateDuration = const Duration(milliseconds: 1600),
@@ -80,6 +82,7 @@ class WigglyLoader extends StatefulWidget {
           wiggleCount: wiggleCount,
           wiggleAmplitude: wiggleAmplitude,
           progressColor: progressColor,
+          progressEndColor: progressEndColor,
           trackColor: trackColor,
           wiggleDuration: wiggleDuration,
           rotateDuration: rotateDuration,
@@ -101,6 +104,7 @@ class WigglyLoader extends StatefulWidget {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.wiggleDuration,
     required this.rotateDuration,
@@ -140,8 +144,13 @@ class WigglyLoader extends StatefulWidget {
   /// Amplitude of the wiggle in logical pixels.
   final double wiggleAmplitude;
 
-  /// Color of the animated progress arc.
+  /// Start color of the animated progress arc.
   final Color progressColor;
+
+  /// Optional end color for a left-to-right color interpolation across the arc.
+  ///
+  /// Defaults to [progressColor] for a flat stroke.
+  final Color? progressEndColor;
 
   /// Color of the background track arc.
   final Color trackColor;
@@ -379,6 +388,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
                 _theme?.progressColor ??
                 widget.progressColor)
             : widget.progressColor;
+    final resolvedProgressEndColor = widget.progressEndColor;
     final resolvedTrackColor = widget.trackColor ==
             WigglyDefaults.loaderTrackColor
         ? (_theme?.loaderTrackColor ?? _theme?.trackColor ?? widget.trackColor)
@@ -421,6 +431,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
         wiggleCount: widget.wiggleCount,
         wiggleAmplitude: resolvedWiggleAmplitude,
         progressColor: resolvedProgressColor,
+        progressEndColor: resolvedProgressEndColor,
         trackColor: resolvedTrackColor,
         arcSpan: widget.arcSpan,
         child: widget.child,

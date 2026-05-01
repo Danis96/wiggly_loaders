@@ -14,6 +14,7 @@ class WigglyDotsCanvas extends StatelessWidget {
     required this.spacing,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
   });
 
@@ -26,6 +27,7 @@ class WigglyDotsCanvas extends StatelessWidget {
   final double spacing;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
 
   @override
@@ -50,6 +52,7 @@ class WigglyDotsCanvas extends StatelessWidget {
               spacing: spacing,
               wiggleAmplitude: wiggleAmplitude,
               progressColor: progressColor,
+              progressEndColor: progressEndColor,
               trackColor: trackColor,
             ),
           );

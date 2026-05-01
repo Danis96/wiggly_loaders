@@ -191,6 +191,34 @@ void main() {
       expect(painter.progressColor, themedColor);
     });
 
+    testWidgets('passes progressEndColor through to the painter',
+        (tester) async {
+      const endColor = Color(0xFF22C55E);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader(
+                progress: 0.5,
+                progressEndColor: endColor,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyArcPainter;
+      expect(painter.progressEndColor, endColor);
+    });
+
     testWidgets('sets default semantics for determinate loader',
         (tester) async {
       await tester.pumpWidget(
@@ -525,6 +553,34 @@ void main() {
 
       expect(linearOffset, greaterThan(defaultOffset));
     });
+
+    testWidgets('passes progressEndColor through to the painter',
+        (tester) async {
+      const endColor = Color(0xFF8B5CF6);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLinearLoader(
+                progress: 0.75,
+                progressEndColor: endColor,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLinearLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyLinearPainter;
+      expect(painter.progressEndColor, endColor);
+    });
   });
 
   group('WigglyDotsLoader', () {
@@ -659,6 +715,34 @@ void main() {
 
       final painter = customPaint.painter! as WigglyDotsPainter;
       expect(painter.progressColor, themedColor);
+    });
+
+    testWidgets('passes progressEndColor through to the painter',
+        (tester) async {
+      const endColor = Color(0xFFF97316);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyDotsLoader(
+                progress: 0.5,
+                progressEndColor: endColor,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyDotsLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyDotsPainter;
+      expect(painter.progressEndColor, endColor);
     });
 
     testWidgets('shared speed factor speeds up indeterminate dots motion',
@@ -883,6 +967,29 @@ void main() {
       expect(indicator.triggerDistance, 92);
       expect(indicator.maxDragDistance, 140);
       expect(indicator.notificationPredicate, isNotNull);
+    });
+
+    testWidgets('accepts progressEndColor', (tester) async {
+      const endColor = Color(0xFF22C55E);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WigglyRefreshIndicator(
+              onRefresh: () async {},
+              progressEndColor: endColor,
+              child: ListView(
+                children: const [Text('Item 1')],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final indicator = tester.widget<WigglyRefreshIndicator>(
+        find.byType(WigglyRefreshIndicator),
+      );
+      expect(indicator.progressEndColor, endColor);
     });
   });
 }

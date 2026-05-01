@@ -12,6 +12,7 @@ class WigglyLinearPainter extends CustomPainter {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.segmentFraction,
     required this.borderRadius,
@@ -25,6 +26,7 @@ class WigglyLinearPainter extends CustomPainter {
   final int wiggleCount;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final double segmentFraction;
   final double borderRadius;
@@ -60,6 +62,8 @@ class WigglyLinearPainter extends CustomPainter {
       canvas,
       size,
       cy,
+      startX: 0,
+      endX: endX,
       _buildWigglyPath(
         startX: 0,
         endX: endX,
@@ -77,6 +81,8 @@ class WigglyLinearPainter extends CustomPainter {
       canvas,
       size,
       cy,
+      startX: startX,
+      endX: endX,
       _buildWigglyPath(
         startX: startX,
         endX: endX,
@@ -115,7 +121,14 @@ class WigglyLinearPainter extends CustomPainter {
     return path;
   }
 
-  void _clipAndDraw(Canvas canvas, Size size, double cy, Path path) {
+  void _clipAndDraw(
+    Canvas canvas,
+    Size size,
+    double cy,
+    Path path, {
+    required double startX,
+    required double endX,
+  }) {
     final effectiveRadius = math.min(borderRadius, height / 2);
     canvas.save();
     canvas.clipRRect(
@@ -127,16 +140,47 @@ class WigglyLinearPainter extends CustomPainter {
         Radius.circular(effectiveRadius),
       ),
     );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = progressColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = height
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = height
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final shader = _buildProgressShader(
+      size: size,
+      startX: startX,
+      endX: endX,
+      cy: cy,
     );
+
+    if (shader != null) {
+      paint.shader = shader;
+    } else {
+      paint.color = progressColor;
+    }
+
+    canvas.drawPath(path, paint);
     canvas.restore();
+  }
+
+  Shader? _buildProgressShader({
+    required Size size,
+    required double startX,
+    required double endX,
+    required double cy,
+  }) {
+    final endColor = progressEndColor ?? progressColor;
+    if (endColor == progressColor || endX <= startX) {
+      return null;
+    }
+
+    return LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [progressColor, endColor],
+    ).createShader(
+      Rect.fromLTRB(startX, cy - height / 2, endX, cy + height / 2),
+    );
   }
 
   @override
@@ -149,6 +193,7 @@ class WigglyLinearPainter extends CustomPainter {
         oldDelegate.wiggleCount != wiggleCount ||
         oldDelegate.wiggleAmplitude != wiggleAmplitude ||
         oldDelegate.progressColor != progressColor ||
+        oldDelegate.progressEndColor != progressEndColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.segmentFraction != segmentFraction ||
         oldDelegate.borderRadius != borderRadius;

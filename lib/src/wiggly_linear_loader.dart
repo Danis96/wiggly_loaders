@@ -26,6 +26,7 @@ class WigglyLinearLoader extends StatefulWidget {
     this.wiggleCount = 8,
     this.wiggleAmplitude = 2.5,
     this.progressColor = WigglyDefaults.linearProgressColor,
+    this.progressEndColor,
     this.trackColor = WigglyDefaults.linearTrackColor,
     this.wiggleDuration = const Duration(milliseconds: 1000),
     this.slideDuration = const Duration(milliseconds: 1400),
@@ -61,6 +62,7 @@ class WigglyLinearLoader extends StatefulWidget {
     int wiggleCount = 8,
     double wiggleAmplitude = 2.5,
     Color progressColor = WigglyDefaults.linearProgressColor,
+    Color? progressEndColor,
     Color trackColor = WigglyDefaults.linearTrackColor,
     Duration wiggleDuration = const Duration(milliseconds: 1000),
     Duration slideDuration = const Duration(milliseconds: 1400),
@@ -77,6 +79,7 @@ class WigglyLinearLoader extends StatefulWidget {
           wiggleCount: wiggleCount,
           wiggleAmplitude: wiggleAmplitude,
           progressColor: progressColor,
+          progressEndColor: progressEndColor,
           trackColor: trackColor,
           wiggleDuration: wiggleDuration,
           slideDuration: slideDuration,
@@ -97,6 +100,7 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.wiggleDuration,
     required this.slideDuration,
@@ -133,8 +137,13 @@ class WigglyLinearLoader extends StatefulWidget {
   /// Vertical amplitude of the wiggle in logical pixels.
   final double wiggleAmplitude;
 
-  /// Color of the progress/segment stroke.
+  /// Start color of the progress/segment stroke.
   final Color progressColor;
+
+  /// Optional end color for gradient interpolation across the filled segment.
+  ///
+  /// Defaults to [progressColor] for a flat stroke.
+  final Color? progressEndColor;
 
   /// Color of the background track.
   final Color trackColor;
@@ -384,6 +393,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
                 _theme?.progressColor ??
                 widget.progressColor)
             : widget.progressColor;
+    final resolvedProgressEndColor = widget.progressEndColor;
     final resolvedTrackColor = widget.trackColor ==
             WigglyDefaults.linearTrackColor
         ? (_theme?.linearTrackColor ?? _theme?.trackColor ?? widget.trackColor)
@@ -420,6 +430,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
         slideOffset: _slideAnim,
         wiggleCount: widget.wiggleCount,
         progressColor: resolvedProgressColor,
+        progressEndColor: resolvedProgressEndColor,
         trackColor: resolvedTrackColor,
         segmentFraction: widget.segmentFraction,
         borderRadius: widget.borderRadius,

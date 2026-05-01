@@ -12,6 +12,7 @@ class WigglyArcPainter extends CustomPainter {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.arcSpan,
     this.trackStrokeCap = StrokeCap.round,
@@ -25,6 +26,7 @@ class WigglyArcPainter extends CustomPainter {
   final int wiggleCount;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final double arcSpan;
   final StrokeCap trackStrokeCap;
@@ -99,14 +101,46 @@ class WigglyArcPainter extends CustomPainter {
       }
     }
 
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = progressColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final shader = _buildProgressShader(
+      center: center,
+      radius: radius,
+      angleOffset: angleOffset,
+      arcFraction: arcFraction,
+    );
+
+    if (shader != null) {
+      paint.shader = shader;
+    } else {
+      paint.color = progressColor;
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  Shader? _buildProgressShader({
+    required Offset center,
+    required double radius,
+    required double angleOffset,
+    required double arcFraction,
+  }) {
+    final endColor = progressEndColor ?? progressColor;
+    if (endColor == progressColor) {
+      return null;
+    }
+
+    return SweepGradient(
+      center: Alignment.center,
+      startAngle: angleOffset,
+      endAngle: angleOffset + (2 * math.pi * arcFraction),
+      colors: [progressColor, endColor],
+    ).createShader(
+      Rect.fromCircle(center: center, radius: radius),
     );
   }
 
@@ -120,6 +154,7 @@ class WigglyArcPainter extends CustomPainter {
         oldDelegate.wiggleCount != wiggleCount ||
         oldDelegate.wiggleAmplitude != wiggleAmplitude ||
         oldDelegate.progressColor != progressColor ||
+        oldDelegate.progressEndColor != progressEndColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.arcSpan != arcSpan ||
         oldDelegate.trackStrokeCap != trackStrokeCap;

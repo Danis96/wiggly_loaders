@@ -14,6 +14,7 @@ class WigglyRefreshBadge extends StatelessWidget {
     required this.wiggleCount,
     required this.wiggleAmplitude,
     required this.progressColor,
+    required this.progressEndColor,
     required this.trackColor,
     required this.backgroundColor,
     required this.arcSpan,
@@ -29,6 +30,7 @@ class WigglyRefreshBadge extends StatelessWidget {
   final int wiggleCount;
   final double wiggleAmplitude;
   final Color progressColor;
+  final Color? progressEndColor;
   final Color trackColor;
   final Color backgroundColor;
   final double arcSpan;
@@ -50,6 +52,7 @@ class WigglyRefreshBadge extends StatelessWidget {
         wiggleCount: wiggleCount,
         wiggleAmplitude: wiggleAmplitude,
         progressColor: progressColor,
+        progressEndColor: progressEndColor,
         trackColor: trackColor,
         arcSpan: arcSpan,
         trackStrokeCap: StrokeCap.butt,
