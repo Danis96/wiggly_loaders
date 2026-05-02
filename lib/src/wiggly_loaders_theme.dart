@@ -25,6 +25,12 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
     this.refreshProgressColor,
     this.refreshTrackColor,
     this.refreshBackgroundColor,
+    this.skeletonBaseColor,
+    this.skeletonHighlightColor,
+    this.buttonProgressColor,
+    this.buttonForegroundColor,
+    this.buttonSuccessColor,
+    this.buttonErrorColor,
   })  : assert(sizeScale == null || sizeScale > 0, 'sizeScale must be > 0'),
         assert(
           strokeWidthScale == null || strokeWidthScale > 0,
@@ -52,6 +58,12 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
   final Color? refreshProgressColor;
   final Color? refreshTrackColor;
   final Color? refreshBackgroundColor;
+  final Color? skeletonBaseColor;
+  final Color? skeletonHighlightColor;
+  final Color? buttonProgressColor;
+  final Color? buttonForegroundColor;
+  final Color? buttonSuccessColor;
+  final Color? buttonErrorColor;
 
   @override
   WigglyLoadersThemeData copyWith({
@@ -71,6 +83,12 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
     Color? refreshProgressColor,
     Color? refreshTrackColor,
     Color? refreshBackgroundColor,
+    Color? skeletonBaseColor,
+    Color? skeletonHighlightColor,
+    Color? buttonProgressColor,
+    Color? buttonForegroundColor,
+    Color? buttonSuccessColor,
+    Color? buttonErrorColor,
   }) {
     return WigglyLoadersThemeData(
       progressColor: progressColor ?? this.progressColor,
@@ -90,6 +108,14 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
       refreshTrackColor: refreshTrackColor ?? this.refreshTrackColor,
       refreshBackgroundColor:
           refreshBackgroundColor ?? this.refreshBackgroundColor,
+      skeletonBaseColor: skeletonBaseColor ?? this.skeletonBaseColor,
+      skeletonHighlightColor:
+          skeletonHighlightColor ?? this.skeletonHighlightColor,
+      buttonProgressColor: buttonProgressColor ?? this.buttonProgressColor,
+      buttonForegroundColor:
+          buttonForegroundColor ?? this.buttonForegroundColor,
+      buttonSuccessColor: buttonSuccessColor ?? this.buttonSuccessColor,
+      buttonErrorColor: buttonErrorColor ?? this.buttonErrorColor,
     );
   }
 
@@ -125,6 +151,18 @@ class WigglyLoadersThemeData extends ThemeExtension<WigglyLoadersThemeData> {
           Color.lerp(refreshTrackColor, other.refreshTrackColor, t),
       refreshBackgroundColor:
           Color.lerp(refreshBackgroundColor, other.refreshBackgroundColor, t),
+      skeletonBaseColor:
+          Color.lerp(skeletonBaseColor, other.skeletonBaseColor, t),
+      skeletonHighlightColor:
+          Color.lerp(skeletonHighlightColor, other.skeletonHighlightColor, t),
+      buttonProgressColor:
+          Color.lerp(buttonProgressColor, other.buttonProgressColor, t),
+      buttonForegroundColor:
+          Color.lerp(buttonForegroundColor, other.buttonForegroundColor, t),
+      buttonSuccessColor:
+          Color.lerp(buttonSuccessColor, other.buttonSuccessColor, t),
+      buttonErrorColor:
+          Color.lerp(buttonErrorColor, other.buttonErrorColor, t),
     );
   }
 }

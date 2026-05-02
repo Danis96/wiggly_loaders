@@ -4,6 +4,12 @@ A collection of smooth, customizable wiggly loading indicators for Flutter. Pack
 
 ## Preview
 
+![Wiggly Loaders preview] https://www.youtube.com/shorts/xEHiK6YdJvQ
+
+`WigglySkeletonLoader` and `WigglyProgressButton` from the example app:
+
+![Skeleton & progress button preview](assets/readme/example_skeleton_button.jpeg)
+
 Screenshots:
 
 | Android                                       | iOS                                    |
@@ -22,12 +28,14 @@ Screenshots:
 
 ## Included widgets
 
-| Widget                   | Use case                                | Modes                      |
-|--------------------------|-----------------------------------------|----------------------------|
-| `WigglyLoader`           | Circular progress/loading state         | determinate, indeterminate |
-| `WigglyLinearLoader`     | Inline/file/network progress bar        | determinate, indeterminate |
-| `WigglyDotsLoader`       | Compact inline/button/chat status       | determinate, indeterminate |
-| `WigglyRefreshIndicator` | Pull-to-refresh wrapper for scrollables | pull progress, refreshing  |
+| Widget                   | Use case                                              | Modes                            |
+|--------------------------|-------------------------------------------------------|----------------------------------|
+| `WigglyLoader`           | Circular progress/loading state                       | determinate, indeterminate       |
+| `WigglyLinearLoader`     | Inline/file/network progress bar                      | determinate, indeterminate       |
+| `WigglyDotsLoader`       | Compact inline/button/chat status                     | determinate, indeterminate       |
+| `WigglyRefreshIndicator` | Pull-to-refresh wrapper for scrollables               | pull progress, refreshing        |
+| `WigglySkeletonLoader`   | Skeleton placeholders with traveling wiggly highlight | block, text lines, card          |
+| `WigglyProgressButton`   | Self-animating action button                          | idle → loading → success / error |
 
 ## Installation
 
@@ -35,7 +43,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.6.0
+  wiggly_loaders: ^0.7.0
 ```
 
 Import:
@@ -109,6 +117,64 @@ WigglyDotsLoader(
   progressColor: Colors.teal,
   progressEndColor: Colors.cyan,
   trackColor: Colors.teal.shade50,
+)
+```
+
+### WigglySkeletonLoader
+
+A shimmering placeholder where the highlight is a sinusoidal wave that **travels** horizontally across the surface — instead of the flat gradient shimmer most packages ship.
+
+```dart
+// Single block
+WigglySkeletonLoader(width: 200, height: 16)
+
+// Multi-line text placeholder
+WigglySkeletonLoader.text(
+  lines: 4,
+  lineHeight: 12,
+  lastLineFraction: 0.5,
+)
+
+// Card placeholder (avatar + lines)
+WigglySkeletonLoader.card(
+  avatarSize: 48,
+  lines: 3,
+)
+
+// Tuned
+WigglySkeletonLoader(
+  width: double.infinity,
+  height: 20,
+  borderRadius: 10,
+  baseColor: Colors.grey.shade200,
+  highlightColor: Colors.white,
+  waveAmplitude: 4,
+  waveLength: 30,
+  bandWidth: 64,
+  duration: const Duration(milliseconds: 1400),
+)
+```
+
+### WigglyProgressButton
+
+A button that morphs through `idle → loading → success / error` while the whole shape wiggles continuously.
+
+```dart
+WigglyButtonState _state = WigglyButtonState.idle;
+
+WigglyProgressButton(
+  state: _state,
+  onPressed: () async {
+    setState(() => _state = WigglyButtonState.loading);
+    try {
+      await submit();
+      setState(() => _state = WigglyButtonState.success);
+    } catch (_) {
+      setState(() => _state = WigglyButtonState.error);
+    }
+  },
+  onComplete: () => debugPrint('reached success'),
+  child: const Text('Submit'),
 )
 ```
 
@@ -208,43 +274,43 @@ flutter run -d ios
 
 ### WigglyLinearLoader
 
-| Parameter          | Default    | Description                                                        |
-|--------------------|------------|--------------------------------------------------------------------|
-| `progress`         | required   | Progress from `0.0` to `1.0` in determinate mode                   |
-| `height`           | `6.0`      | Track height                                                       |
-| `wiggleCount`      | `8`        | Wiggle cycles across full width                                    |
-| `wiggleAmplitude`  | `2.5`      | Vertical wiggle size                                               |
-| `progressColor`    | blue       | Foreground bar color                                               |
-| `progressEndColor` | same as `progressColor` | Optional gradient end color for the filled segment     |
-| `trackColor`       | light gray | Background track color                                             |
-| `wiggleDuration`   | `1000ms`   | Wiggle animation speed                                             |
-| `slideDuration`    | `1400ms`   | Indeterminate slide speed                                          |
-| `segmentFraction`  | `0.45`     | Width of sliding segment                                           |
-| `borderRadius`     | `99.0`     | Track corner radius                                                |
-| `willAnimate`      | `true`     | Intro animation when widget appears                                |
-| `semanticsLabel`   | auto       | Accessibility label                                                |
-| `semanticsValue`   | auto       | Accessibility value                                                |
-| `onComplete`       | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
-| `completeDuration` | `450ms`    | Duration of the burst animation                                    |
+| Parameter          | Default                 | Description                                                        |
+|--------------------|-------------------------|--------------------------------------------------------------------|
+| `progress`         | required                | Progress from `0.0` to `1.0` in determinate mode                   |
+| `height`           | `6.0`                   | Track height                                                       |
+| `wiggleCount`      | `8`                     | Wiggle cycles across full width                                    |
+| `wiggleAmplitude`  | `2.5`                   | Vertical wiggle size                                               |
+| `progressColor`    | blue                    | Foreground bar color                                               |
+| `progressEndColor` | same as `progressColor` | Optional gradient end color for the filled segment                 |
+| `trackColor`       | light gray              | Background track color                                             |
+| `wiggleDuration`   | `1000ms`                | Wiggle animation speed                                             |
+| `slideDuration`    | `1400ms`                | Indeterminate slide speed                                          |
+| `segmentFraction`  | `0.45`                  | Width of sliding segment                                           |
+| `borderRadius`     | `99.0`                  | Track corner radius                                                |
+| `willAnimate`      | `true`                  | Intro animation when widget appears                                |
+| `semanticsLabel`   | auto                    | Accessibility label                                                |
+| `semanticsValue`   | auto                    | Accessibility value                                                |
+| `onComplete`       | `null`                  | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration` | `450ms`                 | Duration of the burst animation                                    |
 
 ### WigglyDotsLoader
 
-| Parameter          | Default    | Description                                                        |
-|--------------------|------------|--------------------------------------------------------------------|
-| `progress`         | required   | Progress from `0.0` to `1.0` in determinate mode                   |
-| `dotCount`         | `3`        | Number of dots in the row                                          |
-| `dotSize`          | `8.0`      | Diameter of each dot                                               |
-| `spacing`          | `6.0`      | Gap between dots                                                   |
-| `wiggleAmplitude`  | `2.5`      | Vertical wiggle size                                               |
-| `progressColor`    | blue       | Active dot color                                                   |
-| `progressEndColor` | same as `progressColor` | Optional gradient end color across active dots        |
-| `trackColor`       | light gray | Inactive dot color                                                 |
-| `duration`         | `900ms`    | Wiggle/travel speed                                                |
-| `willAnimate`      | `true`     | Intro animation when widget appears                                |
-| `semanticsLabel`   | auto       | Accessibility label                                                |
-| `semanticsValue`   | auto       | Accessibility value                                                |
-| `onComplete`       | `null`     | Callback fired after burst animation when `progress` reaches `1.0` |
-| `completeDuration` | `450ms`    | Duration of the burst animation                                    |
+| Parameter          | Default                 | Description                                                        |
+|--------------------|-------------------------|--------------------------------------------------------------------|
+| `progress`         | required                | Progress from `0.0` to `1.0` in determinate mode                   |
+| `dotCount`         | `3`                     | Number of dots in the row                                          |
+| `dotSize`          | `8.0`                   | Diameter of each dot                                               |
+| `spacing`          | `6.0`                   | Gap between dots                                                   |
+| `wiggleAmplitude`  | `2.5`                   | Vertical wiggle size                                               |
+| `progressColor`    | blue                    | Active dot color                                                   |
+| `progressEndColor` | same as `progressColor` | Optional gradient end color across active dots                     |
+| `trackColor`       | light gray              | Inactive dot color                                                 |
+| `duration`         | `900ms`                 | Wiggle/travel speed                                                |
+| `willAnimate`      | `true`                  | Intro animation when widget appears                                |
+| `semanticsLabel`   | auto                    | Accessibility label                                                |
+| `semanticsValue`   | auto                    | Accessibility value                                                |
+| `onComplete`       | `null`                  | Callback fired after burst animation when `progress` reaches `1.0` |
+| `completeDuration` | `450ms`                 | Duration of the burst animation                                    |
 
 ### WigglyRefreshIndicator only
 

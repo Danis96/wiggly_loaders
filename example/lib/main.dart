@@ -548,7 +548,61 @@ class _LoaderGrid extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        const _LoaderCard(
+          title: 'Skeleton',
+          subtitle:
+              'Wave-based shimmer that travels across cards and text rows.',
+          child: WigglySkeletonLoader.card(
+            avatarSize: 48,
+            lines: 3,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _LoaderCard(
+          title: 'Progress Button',
+          subtitle:
+              'A self-animating action button that morphs between idle, loading, success, and error.',
+          child: Center(child: _ProgressButtonDemo()),
+        ),
       ],
+    );
+  }
+}
+
+class _ProgressButtonDemo extends StatefulWidget {
+  const _ProgressButtonDemo();
+
+  @override
+  State<_ProgressButtonDemo> createState() => _ProgressButtonDemoState();
+}
+
+class _ProgressButtonDemoState extends State<_ProgressButtonDemo> {
+  WigglyButtonState _state = WigglyButtonState.idle;
+  bool _failNext = false;
+
+  Future<void> _runFlow() async {
+    setState(() => _state = WigglyButtonState.loading);
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
+    if (!mounted) return;
+    setState(() {
+      _state = _failNext ? WigglyButtonState.error : WigglyButtonState.success;
+      _failNext = !_failNext;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
+    if (!mounted) return;
+    setState(() => _state = WigglyButtonState.idle);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WigglyProgressButton(
+      state: _state,
+      onPressed: _runFlow,
+      width: 220,
+      height: 52,
+      progressColor: const Color(0xFF111827),
+      child: const Text('Submit'),
     );
   }
 }
@@ -626,16 +680,23 @@ class _UsageSection extends StatelessWidget {
                   ),
                 ),
               ),
+              const _MiniUsageCard(
+                title: 'Skeleton Rows',
+                child: WigglySkeletonLoader.text(
+                  lines: 4,
+                  lineHeight: 10,
+                  lineSpacing: 10,
+                ),
+              ),
             ];
 
             if (stacked) {
               return Column(
                 children: [
-                  cards[0],
-                  const SizedBox(height: 14),
-                  cards[1],
-                  const SizedBox(height: 14),
-                  cards[2],
+                  for (var i = 0; i < cards.length; i++) ...[
+                    if (i != 0) const SizedBox(height: 14),
+                    cards[i],
+                  ],
                 ],
               );
             }
@@ -643,11 +704,10 @@ class _UsageSection extends StatelessWidget {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: 14),
-                Expanded(child: cards[1]),
-                const SizedBox(width: 14),
-                Expanded(child: cards[2]),
+                for (var i = 0; i < cards.length; i++) ...[
+                  if (i != 0) const SizedBox(width: 14),
+                  Expanded(child: cards[i]),
+                ],
               ],
             );
           },

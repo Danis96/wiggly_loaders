@@ -1,3 +1,16 @@
+## 0.7.0
+
+* Add `WigglySkeletonLoader` for shimmering skeleton placeholders — the highlight is a sinusoidal wave that **travels** across the shape instead of a flat gradient shimmer
+  * `WigglySkeletonLoader(width, height, borderRadius)` for a single block
+  * `WigglySkeletonLoader.text(lines, lineHeight, lastLineFraction)` for multi-line text placeholders
+  * `WigglySkeletonLoader.card(avatarSize, lines)` for avatar + lines layout
+* Add `WigglyProgressButton` — a button that morphs through `idle → loading → success/error` with a continuously wiggling outline
+* Driven by a `WigglyButtonState` enum, exposes `onPressed`, `onComplete`, and per-state foregrounds
+* Loading state hosts an inline `WigglyDotsLoader.indeterminate`
+* Extend `WigglyLoadersThemeData` with `skeletonBaseColor`, `skeletonHighlightColor`, `buttonProgressColor`, `buttonForegroundColor`, `buttonSuccessColor`, `buttonErrorColor`
+* Both new widgets respect shared `speedFactor`, `ease`, and `MediaQuery.disableAnimations` reduced-motion behavior
+* Test coverage and README cookbook recipes for the new widgets
+
 ## 0.6.0
 
 * Add `onComplete` callback to `WigglyLoader`, `WigglyLinearLoader`, and `WigglyDotsLoader` — fired once after the burst animation finishes when `progress` reaches `1.0`

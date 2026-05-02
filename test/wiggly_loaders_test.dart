@@ -5,6 +5,8 @@ import 'package:wiggly_loaders/src/internal/wiggly_arc_canvas.dart';
 import 'package:wiggly_loaders/src/internal/wiggly_arc_painter.dart';
 import 'package:wiggly_loaders/src/internal/wiggly_dots_painter.dart';
 import 'package:wiggly_loaders/src/internal/wiggly_linear_painter.dart';
+import 'package:wiggly_loaders/src/internal/wiggly_skeleton_painter.dart';
+import 'package:wiggly_loaders/src/internal/wiggly_button_painter.dart';
 
 void main() {
   group('WigglyLoader', () {
@@ -990,6 +992,353 @@ void main() {
         find.byType(WigglyRefreshIndicator),
       );
       expect(indicator.progressEndColor, endColor);
+    });
+  });
+
+  group('WigglySkeletonLoader', () {
+    test('asserts when geometry is invalid', () {
+      expect(
+        () => WigglySkeletonLoader(height: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglySkeletonLoader(borderRadius: -1),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglySkeletonLoader(waveLength: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglySkeletonLoader.text(lines: 0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => WigglySkeletonLoader.text(lastLineFraction: 0),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    testWidgets('renders block variant without error', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglySkeletonLoader(width: 200, height: 16),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(WigglySkeletonLoader), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders text preset with line count', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(16),
+              child: WigglySkeletonLoader.text(lines: 4),
+            ),
+          ),
+        ),
+      );
+      // 4 lines = 4 painters
+      expect(
+        find.descendant(
+          of: find.byType(WigglySkeletonLoader),
+          matching: find.byType(CustomPaint),
+        ),
+        findsNWidgets(4),
+      );
+    });
+
+    testWidgets('renders card preset with avatar + lines', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(16),
+              child: WigglySkeletonLoader.card(lines: 3),
+            ),
+          ),
+        ),
+      );
+      // 1 avatar + 3 lines = 4 painters
+      expect(
+        find.descendant(
+          of: find.byType(WigglySkeletonLoader),
+          matching: find.byType(CustomPaint),
+        ),
+        findsNWidgets(4),
+      );
+    });
+
+    testWidgets('applies theme skeleton colors when defaults are used',
+        (tester) async {
+      const themedBase = Color(0xFFD1D5DB);
+      const themedHighlight = Color(0xFFFAFAFA);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [
+              WigglyLoadersThemeData(
+                skeletonBaseColor: themedBase,
+                skeletonHighlightColor: themedHighlight,
+              ),
+            ],
+          ),
+          home: const Scaffold(
+            body: Center(
+              child: WigglySkeletonLoader(width: 100, height: 14),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglySkeletonLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      final painter = customPaint.painter! as WigglySkeletonPainter;
+      expect(painter.baseColor, themedBase);
+      expect(painter.highlightColor, themedHighlight);
+    });
+
+    testWidgets('softens wave amplitude under reduced motion', (tester) async {
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: WigglySkeletonLoader(
+                  width: 120,
+                  height: 16,
+                  waveAmplitude: 6,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 30));
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglySkeletonLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      final painter = customPaint.painter! as WigglySkeletonPainter;
+      expect(painter.waveAmplitude, closeTo(3.0, 0.001));
+    });
+
+    testWidgets('does not animate when willAnimate is false', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglySkeletonLoader(
+                width: 100,
+                height: 14,
+                willAnimate: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final widget = tester.widget<WigglySkeletonLoader>(
+        find.byType(WigglySkeletonLoader),
+      );
+      expect(widget.willAnimate, isFalse);
+    });
+  });
+
+  group('WigglyProgressButton', () {
+    testWidgets('renders idle child', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: WigglyButtonState.idle,
+                onPressed: () {},
+                child: const Text('Submit'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Submit'), findsOneWidget);
+      expect(find.byType(WigglyProgressButton), findsOneWidget);
+    });
+
+    testWidgets('shows dots in loading state', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: WigglyButtonState.loading,
+                onPressed: () {},
+                child: const Text('Submit'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.descendant(
+          of: find.byType(WigglyProgressButton),
+          matching: find.byType(WigglyDotsLoader),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows check icon in success state', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: WigglyButtonState.success,
+                onPressed: () {},
+                child: const Text('Submit'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    });
+
+    testWidgets('shows close icon in error state', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: WigglyButtonState.error,
+                onPressed: () {},
+                child: const Text('Submit'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    });
+
+    testWidgets('onPressed only fires when idle', (tester) async {
+      var calls = 0;
+      Widget build(WigglyButtonState state) {
+        return MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: state,
+                onPressed: () => calls++,
+                child: const Text('Go'),
+              ),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(build(WigglyButtonState.idle));
+      await tester.tap(find.byType(WigglyProgressButton));
+      await tester.pump();
+      expect(calls, 1);
+
+      await tester.pumpWidget(build(WigglyButtonState.loading));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byType(WigglyProgressButton), warnIfMissed: false);
+      await tester.pump();
+      expect(calls, 1);
+    });
+
+    testWidgets('fires onComplete when transitioning into success',
+        (tester) async {
+      var completed = 0;
+      Widget build(WigglyButtonState state) {
+        return MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: state,
+                onPressed: () {},
+                onComplete: () => completed++,
+                child: const Text('Save'),
+              ),
+            ),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(build(WigglyButtonState.loading));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(completed, 0);
+
+      await tester.pumpWidget(build(WigglyButtonState.success));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(completed, 1);
+
+      // Re-rendering same success state must not re-fire.
+      await tester.pumpWidget(build(WigglyButtonState.success));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(completed, 1);
+    });
+
+    testWidgets('applies theme button colors', (tester) async {
+      const successColor = Color(0xFF065F46);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            extensions: const [
+              WigglyLoadersThemeData(buttonSuccessColor: successColor),
+            ],
+          ),
+          home: Scaffold(
+            body: Center(
+              child: WigglyProgressButton(
+                state: WigglyButtonState.success,
+                onPressed: () {},
+                child: const Text('Done'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final paints = find
+          .descendant(
+            of: find.byType(WigglyProgressButton),
+            matching: find.byType(CustomPaint),
+          )
+          .evaluate()
+          .map((e) => (e.widget as CustomPaint).painter)
+          .whereType<WigglyButtonPainter>()
+          .toList();
+
+      expect(paints, isNotEmpty);
+      expect(paints.first.fillColor, successColor);
     });
   });
 }
