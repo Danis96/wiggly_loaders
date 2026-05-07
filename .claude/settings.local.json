@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(curl -L -sS -o assets/readme/preview.gif 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExODF6bm43N295czk4NTdoc2FjMG10bm9yajZtMGUzanJlbzhieWRqcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iP6vp0abwNfawJZSz5/giphy.gif')",
+      "Bash(ffmpeg -version)",
+      "Bash(brew install *)",
+      "Bash(gifsicle --version)",
+      "Bash(gifsicle --resize-width 240 --colors 128 -O3 assets/readme/preview.gif -o assets/readme/preview.gif)",
+      "Bash(gifsicle assets/readme/preview.gif --info)",
+      "Bash(curl -L -sS -o /tmp/preview_orig.gif 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExODF6bm43N295czk4NTdoc2FjMG10bm9yajZtMGUzanJlbzhieWRqcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/iP6vp0abwNfawJZSz5/giphy.gif')",
+      "Bash(gifsicle --info /tmp/preview_orig.gif)"
+    ]
+  }
+}

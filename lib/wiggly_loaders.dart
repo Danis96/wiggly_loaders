@@ -16,4 +16,6 @@ export 'src/wiggly_dots_loader.dart';
 export 'src/wiggly_refresh_indicator.dart';
 export 'src/wiggly_skeleton_loader.dart';
 export 'src/wiggly_progress_button.dart';
+export 'src/wiggly_controller.dart';
+export 'src/wiggly_debug.dart';
 export 'src/wiggly_loaders_theme.dart';

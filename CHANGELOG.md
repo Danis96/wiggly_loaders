@@ -1,3 +1,12 @@
+## 0.8.0
+
+* Add `WigglyController` for `WigglyLoader`, `WigglyLinearLoader`, and `WigglyDotsLoader`
+  * Pause and resume internal animation loops from outside widget tree
+  * Jump to determinate progress programmatically, including from an indeterminate loader
+  * Listen for playback status changes, including `completed`
+* Add global `debugWigglyLoaders` flag to overlay wave guides and sample points for arc, linear, dot, and refresh painters
+* Update README and test coverage for controller-driven playback and debug tooling
+
 ## 0.7.0
 
 * Add `WigglySkeletonLoader` for shimmering skeleton placeholders — the highlight is a sinusoidal wave that **travels** across the shape instead of a flat gradient shimmer

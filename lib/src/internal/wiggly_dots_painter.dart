@@ -15,6 +15,7 @@ class WigglyDotsPainter extends CustomPainter {
     required this.progressColor,
     required this.progressEndColor,
     required this.trackColor,
+    required this.debug,
   });
 
   final double progress;
@@ -28,12 +29,23 @@ class WigglyDotsPainter extends CustomPainter {
   final Color progressColor;
   final Color? progressEndColor;
   final Color trackColor;
+  final bool debug;
 
   @override
   void paint(Canvas canvas, Size size) {
     final baseRadius = dotSize / 2;
     final centerY = size.height / 2;
     final progressPosition = progress * dotCount;
+
+    if (debug) {
+      canvas.drawLine(
+        Offset(0, centerY),
+        Offset(size.width, centerY),
+        Paint()
+          ..color = const Color(0x88EF4444)
+          ..strokeWidth = 1.0,
+      );
+    }
 
     for (var index = 0; index < dotCount; index++) {
       final centerX = baseRadius + index * (dotSize + spacing);
@@ -52,6 +64,17 @@ class WigglyDotsPainter extends CustomPainter {
         radius,
         Paint()..color = color,
       );
+
+      if (debug) {
+        canvas.drawCircle(
+          Offset(centerX, y),
+          baseRadius + 2,
+          Paint()
+            ..color = const Color(0xCCEF4444)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0,
+        );
+      }
     }
   }
 
@@ -86,6 +109,7 @@ class WigglyDotsPainter extends CustomPainter {
         oldDelegate.wiggleAmplitude != wiggleAmplitude ||
         oldDelegate.progressColor != progressColor ||
         oldDelegate.progressEndColor != progressEndColor ||
-        oldDelegate.trackColor != trackColor;
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.debug != debug;
   }
 }

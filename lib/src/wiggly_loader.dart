@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'internal/wiggly_defaults.dart';
 import 'internal/wiggly_arc_canvas.dart';
+import 'internal/wiggly_defaults.dart';
+import 'wiggly_controller.dart';
+import 'wiggly_debug.dart';
 import 'wiggly_loaders_theme.dart';
 
 /// A customizable wiggly/wavy circular loading indicator.
@@ -36,6 +38,7 @@ class WigglyLoader extends StatefulWidget {
     this.child,
     this.semanticsLabel,
     this.semanticsValue,
+    this.controller,
     this.onComplete,
     this.completeDuration = const Duration(milliseconds: 450),
   })  : _progress = progress,
@@ -73,6 +76,7 @@ class WigglyLoader extends StatefulWidget {
     Widget? child,
     String? semanticsLabel,
     String? semanticsValue,
+    WigglyController? controller,
   }) : this._(
           key: key,
           progress: 0.0,
@@ -91,6 +95,7 @@ class WigglyLoader extends StatefulWidget {
           child: child,
           semanticsLabel: semanticsLabel,
           semanticsValue: semanticsValue,
+          controller: controller,
           onComplete: null,
           completeDuration: const Duration(milliseconds: 450),
         );
@@ -113,6 +118,7 @@ class WigglyLoader extends StatefulWidget {
     required this.child,
     required this.semanticsLabel,
     required this.semanticsValue,
+    required this.controller,
     required this.onComplete,
     required this.completeDuration,
   })  : _progress = progress,
@@ -177,6 +183,9 @@ class WigglyLoader extends StatefulWidget {
   /// Optional semantic value for assistive technologies.
   final String? semanticsValue;
 
+  /// Optional external animation and progress controller.
+  final WigglyController? controller;
+
   /// Called once after the burst animation finishes when [progress] reaches `1.0`.
   final VoidCallback? onComplete;
 
@@ -205,6 +214,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
   late Animation<double> _entryAnim;
   late final AnimationController _burstController;
   double _burstMultiplier = 1.0;
+  double? _controlledProgress;
   WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
@@ -257,6 +267,8 @@ class _WigglyLoaderState extends State<WigglyLoader>
     )
       ..addListener(_handleBurstTick)
       ..addStatusListener(_handleBurstStatus);
+
+    _attachController();
   }
 
   @override
@@ -290,7 +302,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
   }
 
   void _handleEntryStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed && widget._indeterminate) {
+    if (status == AnimationStatus.completed && _effectiveIndeterminate) {
       _rotateController.repeat();
     }
   }
@@ -307,6 +319,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
   void _handleBurstStatus(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
       setState(() => _burstMultiplier = 1.0);
+      widget.controller?.notifyCompleted();
       widget.onComplete?.call();
     }
   }
@@ -314,6 +327,9 @@ class _WigglyLoaderState extends State<WigglyLoader>
   @override
   void didUpdateWidget(covariant WigglyLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldProgress = _effectiveProgressFor(oldWidget._progress);
+    final oldIndeterminate =
+        _effectiveIndeterminateFor(oldWidget._indeterminate);
 
     if (oldWidget.willAnimate != widget.willAnimate) {
       if (widget.willAnimate) {
@@ -323,7 +339,7 @@ class _WigglyLoaderState extends State<WigglyLoader>
         _entryController.forward(from: 0.0);
       } else {
         _entryController.value = 1.0;
-        if (widget._indeterminate) {
+        if (_effectiveIndeterminate) {
           _rotateController.repeat();
         }
       }
@@ -338,35 +354,29 @@ class _WigglyLoaderState extends State<WigglyLoader>
       _burstController.duration = widget.completeDuration;
     }
 
-    if (!widget._indeterminate &&
-        oldWidget._progress < 1.0 &&
-        widget._progress >= 1.0) {
-      if (_reduceMotion) {
-        widget.onComplete?.call();
-      } else {
-        _burstController.forward(from: 0.0);
-      }
+    if (oldWidget._indeterminate != widget._indeterminate &&
+        !_effectiveIndeterminate) {
+      _rotateController
+        ..stop()
+        ..reset();
     }
 
-    if (oldWidget._indeterminate != widget._indeterminate) {
-      if (widget._indeterminate) {
-        if (widget.willAnimate && !_entryController.isCompleted) {
-          _rotateController
-            ..stop()
-            ..reset();
-        } else {
-          _rotateController.repeat();
-        }
-      } else {
-        _rotateController
-          ..stop()
-          ..reset();
-      }
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.detach(this);
+      _attachController();
     }
+
+    _handleEffectiveProgressChange(
+      oldProgress: oldProgress,
+      newProgress: _effectiveProgress,
+      oldIndeterminate: oldIndeterminate,
+      newIndeterminate: _effectiveIndeterminate,
+    );
   }
 
   @override
   void dispose() {
+    widget.controller?.detach(this);
     _wiggleController.dispose();
     _rotateController.dispose();
     _entryController
@@ -405,16 +415,18 @@ class _WigglyLoaderState extends State<WigglyLoader>
     );
     final resolvedWiggleAmplitude =
         _effectiveAmplitude(widget.wiggleAmplitude) * _burstMultiplier;
+    final effectiveIndeterminate = _effectiveIndeterminate;
+    final effectiveProgress = _effectiveProgress;
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
-    final showIndeterminateIntro = widget._indeterminate &&
+    final showIndeterminateIntro = effectiveIndeterminate &&
         widget.willAnimate &&
         !_entryController.isCompleted;
     final semanticsLabel = widget.semanticsLabel ??
-        (widget._indeterminate ? 'Loading' : 'Loading progress');
+        (effectiveIndeterminate ? 'Loading' : 'Loading progress');
     final semanticsValue = widget.semanticsValue ??
-        (widget._indeterminate
+        (effectiveIndeterminate
             ? null
-            : '${(widget._progress * 100).round()} percent');
+            : '${(effectiveProgress * 100).round()} percent');
 
     return Semantics(
       container: true,
@@ -422,9 +434,10 @@ class _WigglyLoaderState extends State<WigglyLoader>
       value: semanticsValue,
       child: WigglyArcCanvas(
         size: resolvedSize,
-        progress:
-            showIndeterminateIntro ? entryValue : widget._progress * entryValue,
-        indeterminate: widget._indeterminate && !showIndeterminateIntro,
+        progress: showIndeterminateIntro
+            ? entryValue
+            : effectiveProgress * entryValue,
+        indeterminate: effectiveIndeterminate && !showIndeterminateIntro,
         phase: _phaseAnim,
         rotation: _rotateAnim,
         strokeWidth: resolvedStrokeWidth,
@@ -434,9 +447,108 @@ class _WigglyLoaderState extends State<WigglyLoader>
         progressEndColor: resolvedProgressEndColor,
         trackColor: resolvedTrackColor,
         arcSpan: widget.arcSpan,
+        debug: debugWigglyLoaders,
         child: widget.child,
       ),
     );
+  }
+
+  void _attachController() {
+    widget.controller?.attach(
+      owner: this,
+      pause: _pauseAnimations,
+      resume: _resumeAnimations,
+      onProgressOverrideChanged: _handleControlledProgressChanged,
+      readProgress: () => _effectiveIndeterminate ? null : _effectiveProgress,
+    );
+  }
+
+  double get _effectiveProgress =>
+      (_controlledProgress ?? widget._progress).clamp(0.0, 1.0);
+
+  double _effectiveProgressFor(double widgetProgress) =>
+      (_controlledProgress ?? widgetProgress).clamp(0.0, 1.0);
+
+  bool get _effectiveIndeterminate => _effectiveIndeterminateFor(
+        widget._indeterminate,
+      );
+
+  bool _effectiveIndeterminateFor(bool indeterminate) =>
+      indeterminate && _controlledProgress == null;
+
+  void _handleControlledProgressChanged(double? progress) {
+    final oldProgress = _effectiveProgress;
+    final oldIndeterminate = _effectiveIndeterminate;
+    setState(() {
+      _controlledProgress = progress;
+    });
+    _handleEffectiveProgressChange(
+      oldProgress: oldProgress,
+      newProgress: _effectiveProgress,
+      oldIndeterminate: oldIndeterminate,
+      newIndeterminate: _effectiveIndeterminate,
+    );
+  }
+
+  void _handleEffectiveProgressChange({
+    required double oldProgress,
+    required double newProgress,
+    required bool oldIndeterminate,
+    required bool newIndeterminate,
+  }) {
+    if (oldIndeterminate && !newIndeterminate) {
+      _rotateController
+        ..stop()
+        ..reset();
+    } else if (!oldIndeterminate && newIndeterminate) {
+      if (widget.willAnimate && !_entryController.isCompleted) {
+        _rotateController
+          ..stop()
+          ..reset();
+      } else {
+        _rotateController.repeat();
+      }
+    }
+
+    if (!newIndeterminate && oldProgress < 1.0 && newProgress >= 1.0) {
+      if (_reduceMotion) {
+        widget.controller?.notifyCompleted();
+        widget.onComplete?.call();
+      } else {
+        _burstController.forward(from: 0.0);
+      }
+      return;
+    }
+
+    if (!newIndeterminate && newProgress < 1.0) {
+      widget.controller?.notifyPlaying();
+    } else if (newIndeterminate) {
+      widget.controller?.notifyPlaying();
+    }
+  }
+
+  void _pauseAnimations() {
+    _wiggleController.stop(canceled: false);
+    _rotateController.stop(canceled: false);
+    _entryController.stop(canceled: false);
+    _burstController.stop(canceled: false);
+  }
+
+  void _resumeAnimations() {
+    _wiggleController.repeat();
+
+    if (widget.willAnimate && !_entryController.isCompleted) {
+      _entryController.forward();
+      return;
+    }
+
+    if (_effectiveIndeterminate) {
+      _rotateController.repeat();
+    }
+
+    if (_burstController.value > 0.0 && _burstController.value < 1.0) {
+      _burstController.forward();
+    }
   }
 
   Duration _effectiveDuration(Duration duration) {

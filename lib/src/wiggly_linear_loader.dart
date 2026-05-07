@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'internal/wiggly_defaults.dart';
 import 'internal/wiggly_linear_canvas.dart';
+import 'wiggly_controller.dart';
+import 'wiggly_debug.dart';
 import 'wiggly_loaders_theme.dart';
 
 /// A wiggly/wavy horizontal linear loading indicator.
@@ -35,6 +37,7 @@ class WigglyLinearLoader extends StatefulWidget {
     this.willAnimate = true,
     this.semanticsLabel,
     this.semanticsValue,
+    this.controller,
     this.onComplete,
     this.completeDuration = const Duration(milliseconds: 450),
   })  : _progress = progress,
@@ -71,6 +74,7 @@ class WigglyLinearLoader extends StatefulWidget {
     bool willAnimate = true,
     String? semanticsLabel,
     String? semanticsValue,
+    WigglyController? controller,
   }) : this._(
           key: key,
           progress: 0.0,
@@ -88,6 +92,7 @@ class WigglyLinearLoader extends StatefulWidget {
           willAnimate: willAnimate,
           semanticsLabel: semanticsLabel,
           semanticsValue: semanticsValue,
+          controller: controller,
           onComplete: null,
           completeDuration: const Duration(milliseconds: 450),
         );
@@ -109,6 +114,7 @@ class WigglyLinearLoader extends StatefulWidget {
     required this.willAnimate,
     required this.semanticsLabel,
     required this.semanticsValue,
+    required this.controller,
     required this.onComplete,
     required this.completeDuration,
   })  : _progress = progress,
@@ -169,6 +175,9 @@ class WigglyLinearLoader extends StatefulWidget {
   /// Optional semantic value for assistive technologies.
   final String? semanticsValue;
 
+  /// Optional external animation and progress controller.
+  final WigglyController? controller;
+
   /// Called once after the burst animation finishes when [progress] reaches `1.0`.
   final VoidCallback? onComplete;
 
@@ -196,6 +205,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   late Animation<double> _entryAnim;
   late final AnimationController _burstController;
   double _burstMultiplier = 1.0;
+  double? _controlledProgress;
   WigglyLoadersThemeData? _theme;
   bool _reduceMotion = false;
 
@@ -246,6 +256,8 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     )
       ..addListener(_handleBurstTick)
       ..addStatusListener(_handleBurstStatus);
+
+    _attachController();
   }
 
   @override
@@ -292,7 +304,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   }
 
   void _handleEntryStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed && widget._indeterminate) {
+    if (status == AnimationStatus.completed && _effectiveIndeterminate) {
       _slideController.repeat();
     }
   }
@@ -309,6 +321,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   void _handleBurstStatus(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
       setState(() => _burstMultiplier = 1.0);
+      widget.controller?.notifyCompleted();
       widget.onComplete?.call();
     }
   }
@@ -316,6 +329,9 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
   @override
   void didUpdateWidget(covariant WigglyLinearLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldProgress = _effectiveProgressFor(oldWidget._progress);
+    final oldIndeterminate =
+        _effectiveIndeterminateFor(oldWidget._indeterminate);
 
     if (oldWidget.willAnimate != widget.willAnimate) {
       if (widget.willAnimate) {
@@ -325,7 +341,7 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
         _entryController.forward(from: 0.0);
       } else {
         _entryController.value = 1.0;
-        if (widget._indeterminate) {
+        if (_effectiveIndeterminate) {
           _slideController.repeat();
         }
       }
@@ -340,38 +356,27 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       _burstController.duration = widget.completeDuration;
     }
 
-    if (!widget._indeterminate &&
-        oldWidget._progress < 1.0 &&
-        widget._progress >= 1.0) {
-      if (_reduceMotion) {
-        widget.onComplete?.call();
-      } else {
-        _burstController.forward(from: 0.0);
-      }
-    }
-
     if (oldWidget._indeterminate != widget._indeterminate ||
         oldWidget.segmentFraction != widget.segmentFraction) {
       _slideAnim = _buildSlideAnimation();
-
-      if (widget._indeterminate) {
-        if (widget.willAnimate && !_entryController.isCompleted) {
-          _slideController
-            ..stop()
-            ..reset();
-        } else {
-          _slideController.repeat();
-        }
-      } else {
-        _slideController
-          ..stop()
-          ..reset();
-      }
     }
+
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.detach(this);
+      _attachController();
+    }
+
+    _handleEffectiveProgressChange(
+      oldProgress: oldProgress,
+      newProgress: _effectiveProgress,
+      oldIndeterminate: oldIndeterminate,
+      newIndeterminate: _effectiveIndeterminate,
+    );
   }
 
   @override
   void dispose() {
+    widget.controller?.detach(this);
     _wiggleController.dispose();
     _slideController.dispose();
     _entryController
@@ -405,16 +410,18 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
     );
     final resolvedWiggleAmplitude =
         _effectiveAmplitude(widget.wiggleAmplitude) * _burstMultiplier;
+    final effectiveIndeterminate = _effectiveIndeterminate;
+    final effectiveProgress = _effectiveProgress;
     final entryValue = widget.willAnimate ? _entryAnim.value : 1.0;
-    final showIndeterminateIntro = widget._indeterminate &&
+    final showIndeterminateIntro = effectiveIndeterminate &&
         widget.willAnimate &&
         !_entryController.isCompleted;
     final semanticsLabel = widget.semanticsLabel ??
-        (widget._indeterminate ? 'Loading' : 'Loading progress');
+        (effectiveIndeterminate ? 'Loading' : 'Loading progress');
     final semanticsValue = widget.semanticsValue ??
-        (widget._indeterminate
+        (effectiveIndeterminate
             ? null
-            : '${(widget._progress * 100).round()} percent');
+            : '${(effectiveProgress * 100).round()} percent');
 
     return Semantics(
       container: true,
@@ -423,9 +430,10 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
       child: WigglyLinearCanvas(
         height: resolvedHeight,
         wiggleAmplitude: resolvedWiggleAmplitude,
-        progress:
-            showIndeterminateIntro ? entryValue : widget._progress * entryValue,
-        indeterminate: widget._indeterminate && !showIndeterminateIntro,
+        progress: showIndeterminateIntro
+            ? entryValue
+            : effectiveProgress * entryValue,
+        indeterminate: effectiveIndeterminate && !showIndeterminateIntro,
         phase: _phaseAnim,
         slideOffset: _slideAnim,
         wiggleCount: widget.wiggleCount,
@@ -434,8 +442,107 @@ class _WigglyLinearLoaderState extends State<WigglyLinearLoader>
         trackColor: resolvedTrackColor,
         segmentFraction: widget.segmentFraction,
         borderRadius: widget.borderRadius,
+        debug: debugWigglyLoaders,
       ),
     );
+  }
+
+  void _attachController() {
+    widget.controller?.attach(
+      owner: this,
+      pause: _pauseAnimations,
+      resume: _resumeAnimations,
+      onProgressOverrideChanged: _handleControlledProgressChanged,
+      readProgress: () => _effectiveIndeterminate ? null : _effectiveProgress,
+    );
+  }
+
+  double get _effectiveProgress =>
+      (_controlledProgress ?? widget._progress).clamp(0.0, 1.0);
+
+  double _effectiveProgressFor(double widgetProgress) =>
+      (_controlledProgress ?? widgetProgress).clamp(0.0, 1.0);
+
+  bool get _effectiveIndeterminate => _effectiveIndeterminateFor(
+        widget._indeterminate,
+      );
+
+  bool _effectiveIndeterminateFor(bool indeterminate) =>
+      indeterminate && _controlledProgress == null;
+
+  void _handleControlledProgressChanged(double? progress) {
+    final oldProgress = _effectiveProgress;
+    final oldIndeterminate = _effectiveIndeterminate;
+    setState(() {
+      _controlledProgress = progress;
+    });
+    _handleEffectiveProgressChange(
+      oldProgress: oldProgress,
+      newProgress: _effectiveProgress,
+      oldIndeterminate: oldIndeterminate,
+      newIndeterminate: _effectiveIndeterminate,
+    );
+  }
+
+  void _handleEffectiveProgressChange({
+    required double oldProgress,
+    required double newProgress,
+    required bool oldIndeterminate,
+    required bool newIndeterminate,
+  }) {
+    if (oldIndeterminate && !newIndeterminate) {
+      _slideController
+        ..stop()
+        ..reset();
+    } else if (!oldIndeterminate && newIndeterminate) {
+      if (widget.willAnimate && !_entryController.isCompleted) {
+        _slideController
+          ..stop()
+          ..reset();
+      } else {
+        _slideController.repeat();
+      }
+    }
+
+    if (!newIndeterminate && oldProgress < 1.0 && newProgress >= 1.0) {
+      if (_reduceMotion) {
+        widget.controller?.notifyCompleted();
+        widget.onComplete?.call();
+      } else {
+        _burstController.forward(from: 0.0);
+      }
+      return;
+    }
+
+    if (!newIndeterminate && newProgress < 1.0) {
+      widget.controller?.notifyPlaying();
+    } else if (newIndeterminate) {
+      widget.controller?.notifyPlaying();
+    }
+  }
+
+  void _pauseAnimations() {
+    _wiggleController.stop(canceled: false);
+    _slideController.stop(canceled: false);
+    _entryController.stop(canceled: false);
+    _burstController.stop(canceled: false);
+  }
+
+  void _resumeAnimations() {
+    _wiggleController.repeat();
+
+    if (widget.willAnimate && !_entryController.isCompleted) {
+      _entryController.forward();
+      return;
+    }
+
+    if (_effectiveIndeterminate) {
+      _slideController.repeat();
+    }
+
+    if (_burstController.value > 0.0 && _burstController.value < 1.0) {
+      _burstController.forward();
+    }
   }
 
   Duration _effectiveDuration(Duration duration) {

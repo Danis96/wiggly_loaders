@@ -91,6 +91,15 @@ class _DemoPage extends StatefulWidget {
 class _DemoPageState extends State<_DemoPage> {
   double _progress = 0.72;
   bool _simulateReducedMotion = false;
+  bool _debugOverlay = false;
+  final WigglyController _controller = WigglyController();
+
+  @override
+  void dispose() {
+    debugWigglyLoaders = false;
+    _controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleRefresh() async {
     await Future<void>.delayed(const Duration(seconds: 2));
@@ -155,14 +164,22 @@ class _DemoPageState extends State<_DemoPage> {
                                       progress: _progress,
                                       simulateReducedMotion:
                                           _simulateReducedMotion,
+                                      debugOverlay: _debugOverlay,
                                       onReducedMotionChanged: (value) {
                                         setState(
                                           () => _simulateReducedMotion = value,
                                         );
                                       },
+                                      onDebugOverlayChanged: (value) {
+                                        setState(() => _debugOverlay = value);
+                                        debugWigglyLoaders = value;
+                                      },
                                     ),
                                     const SizedBox(height: 20),
-                                    _LoaderGrid(progress: _progress),
+                                    _LoaderGrid(
+                                      progress: _progress,
+                                      controller: _controller,
+                                    ),
                                   ],
                                 );
                               }
@@ -176,17 +193,25 @@ class _DemoPageState extends State<_DemoPage> {
                                       progress: _progress,
                                       simulateReducedMotion:
                                           _simulateReducedMotion,
+                                      debugOverlay: _debugOverlay,
                                       onReducedMotionChanged: (value) {
                                         setState(
                                           () => _simulateReducedMotion = value,
                                         );
+                                      },
+                                      onDebugOverlayChanged: (value) {
+                                        setState(() => _debugOverlay = value);
+                                        debugWigglyLoaders = value;
                                       },
                                     ),
                                   ),
                                   const SizedBox(width: 20),
                                   Expanded(
                                     flex: 6,
-                                    child: _LoaderGrid(progress: _progress),
+                                    child: _LoaderGrid(
+                                      progress: _progress,
+                                      controller: _controller,
+                                    ),
                                   ),
                                 ],
                               );
@@ -409,12 +434,16 @@ class _FeaturePanel extends StatelessWidget {
   const _FeaturePanel({
     required this.progress,
     required this.simulateReducedMotion,
+    required this.debugOverlay,
     required this.onReducedMotionChanged,
+    required this.onDebugOverlayChanged,
   });
 
   final double progress;
   final bool simulateReducedMotion;
+  final bool debugOverlay;
   final ValueChanged<bool> onReducedMotionChanged;
+  final ValueChanged<bool> onDebugOverlayChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +491,23 @@ class _FeaturePanel extends StatelessWidget {
               style: const TextStyle(color: Color(0xFF6B7280)),
             ),
           ),
+          const Divider(height: 12),
+          SwitchListTile.adaptive(
+            value: debugOverlay,
+            contentPadding: EdgeInsets.zero,
+            onChanged: onDebugOverlayChanged,
+            title: const Text(
+              'Enable debug overlay',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            subtitle: const Text(
+              'Shows wave guides and sample points across loaders.',
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
+          ),
         ],
       ),
     );
@@ -471,9 +517,11 @@ class _FeaturePanel extends StatelessWidget {
 class _LoaderGrid extends StatelessWidget {
   const _LoaderGrid({
     required this.progress,
+    required this.controller,
   });
 
   final double progress;
+  final WigglyController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -496,6 +544,13 @@ class _LoaderGrid extends StatelessWidget {
               ),
             ),
           ),
+        ),
+        const SizedBox(height: 16),
+        _LoaderCard(
+          title: 'Controller Playground',
+          subtitle:
+              'Pause, resume, or jump from looping motion into exact progress.',
+          child: _ControllerDemo(controller: controller),
         ),
         const SizedBox(height: 16),
         _LoaderCard(
@@ -603,6 +658,131 @@ class _ProgressButtonDemoState extends State<_ProgressButtonDemo> {
       height: 52,
       progressColor: const Color(0xFF111827),
       child: const Text('Submit'),
+    );
+  }
+}
+
+class _ControllerDemo extends StatefulWidget {
+  const _ControllerDemo({
+    required this.controller,
+  });
+
+  final WigglyController controller;
+
+  @override
+  State<_ControllerDemo> createState() => _ControllerDemoState();
+}
+
+class _ControllerDemoState extends State<_ControllerDemo> {
+  double _progress = 0.38;
+  late WigglyControllerStatus _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.controller.status;
+    widget.controller.addStatusListener(_handleStatusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ControllerDemo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) {
+      return;
+    }
+    oldWidget.controller.removeStatusListener(_handleStatusChanged);
+    widget.controller.addStatusListener(_handleStatusChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeStatusListener(_handleStatusChanged);
+    super.dispose();
+  }
+
+  void _handleStatusChanged(WigglyControllerStatus status) {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _status == status) return;
+      setState(() => _status = status);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            WigglyLoader.indeterminate(
+              controller: widget.controller,
+              willAnimate: false,
+              size: 76,
+              progressEndColor: const Color(0xFF2563EB),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Status: ${_status.name.toUpperCase()}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Drive a loader like a tiny Lottie instance: freeze it, resume it, or snap to a milestone.',
+                    style: TextStyle(
+                      color: Color(0xFF6B7280),
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Slider(
+          value: _progress,
+          onChanged: (value) {
+            setState(() => _progress = value);
+            widget.controller.jumpTo(value);
+          },
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton(
+              onPressed: widget.controller.pause,
+              child: const Text('Pause'),
+            ),
+            OutlinedButton(
+              onPressed: widget.controller.resume,
+              child: const Text('Resume'),
+            ),
+            OutlinedButton(
+              onPressed: () {
+                setState(() => _progress = 1.0);
+                widget.controller.jumpTo(1.0);
+              },
+              child: const Text('Jump to 100%'),
+            ),
+            OutlinedButton(
+              onPressed: widget.controller.clearProgress,
+              child: const Text('Back to loop'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

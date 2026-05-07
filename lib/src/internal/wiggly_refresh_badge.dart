@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'wiggly_arc_canvas.dart';
+import '../wiggly_debug.dart';
 
 class WigglyRefreshBadge extends StatelessWidget {
   const WigglyRefreshBadge({
@@ -55,6 +56,7 @@ class WigglyRefreshBadge extends StatelessWidget {
         progressEndColor: progressEndColor,
         trackColor: trackColor,
         arcSpan: arcSpan,
+        debug: debugWigglyLoaders,
         trackStrokeCap: StrokeCap.butt,
       ),
     );

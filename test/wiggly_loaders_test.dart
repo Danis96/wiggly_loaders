@@ -374,6 +374,91 @@ void main() {
       final afterBurst = amplitudeAtRest();
       expect(afterBurst, closeTo(beforeBurst, 0.01));
     });
+
+    testWidgets('controller can pause and resume indeterminate motion',
+        (tester) async {
+      final controller = WigglyController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader.indeterminate(
+                controller: controller,
+                willAnimate: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      double rotationValue() {
+        final customPaint = tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(WigglyLoader),
+            matching: find.byType(CustomPaint),
+          ),
+        );
+        return (customPaint.painter! as WigglyArcPainter).rotation;
+      }
+
+      await tester.pump(const Duration(milliseconds: 250));
+      final beforePause = rotationValue();
+
+      controller.pause();
+      await tester.pump(const Duration(milliseconds: 250));
+      final paused = rotationValue();
+
+      controller.resume();
+      await tester.pump(const Duration(milliseconds: 100));
+      final resumedStart = rotationValue();
+      await tester.pump(const Duration(milliseconds: 200));
+      final resumedEnd = rotationValue();
+
+      expect(paused, closeTo(beforePause, 0.0001));
+      expect(resumedEnd, isNot(closeTo(resumedStart, 0.0001)));
+      expect(controller.status, WigglyControllerStatus.playing);
+    });
+
+    testWidgets('controller can override progress and emit completed status',
+        (tester) async {
+      final controller = WigglyController();
+      final statuses = <WigglyControllerStatus>[];
+      controller.addStatusListener(statuses.add);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLoader.indeterminate(
+                controller: controller,
+                willAnimate: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      controller.jumpTo(0.65);
+      await tester.pump();
+
+      var customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      var painter = customPaint.painter! as WigglyArcPainter;
+      expect(painter.indeterminate, isFalse);
+      expect(painter.progress, closeTo(0.65, 0.001));
+
+      controller.jumpTo(1.0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(statuses, contains(WigglyControllerStatus.completed));
+      expect(controller.progress, 1.0);
+    });
   });
 
   group('WigglyLinearLoader', () {
@@ -582,6 +667,32 @@ void main() {
 
       final painter = customPaint.painter! as WigglyLinearPainter;
       expect(painter.progressEndColor, endColor);
+    });
+
+    testWidgets('global debug flag enables linear debug overlay',
+        (tester) async {
+      addTearDown(() => debugWigglyLoaders = false);
+      debugWigglyLoaders = true;
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: WigglyLinearLoader(progress: 0.4),
+            ),
+          ),
+        ),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WigglyLinearLoader),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+
+      final painter = customPaint.painter! as WigglyLinearPainter;
+      expect(painter.debug, isTrue);
     });
   });
 

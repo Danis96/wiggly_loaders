@@ -17,6 +17,7 @@ class WigglyLinearCanvas extends StatelessWidget {
     required this.trackColor,
     required this.segmentFraction,
     required this.borderRadius,
+    required this.debug,
   });
 
   final double height;
@@ -31,6 +32,7 @@ class WigglyLinearCanvas extends StatelessWidget {
   final Color trackColor;
   final double segmentFraction;
   final double borderRadius;
+  final bool debug;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class WigglyLinearCanvas extends StatelessWidget {
               trackColor: trackColor,
               segmentFraction: segmentFraction,
               borderRadius: borderRadius,
+              debug: debug,
             ),
           );
         },

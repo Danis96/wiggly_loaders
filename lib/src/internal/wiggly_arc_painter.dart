@@ -15,6 +15,7 @@ class WigglyArcPainter extends CustomPainter {
     required this.progressEndColor,
     required this.trackColor,
     required this.arcSpan,
+    required this.debug,
     this.trackStrokeCap = StrokeCap.round,
   });
 
@@ -29,6 +30,7 @@ class WigglyArcPainter extends CustomPainter {
   final Color? progressEndColor;
   final Color trackColor;
   final double arcSpan;
+  final bool debug;
   final StrokeCap trackStrokeCap;
 
   static const double _startAngle = -math.pi / 2;
@@ -48,6 +50,17 @@ class WigglyArcPainter extends CustomPainter {
         ..strokeWidth = strokeWidth
         ..strokeCap = trackStrokeCap,
     );
+
+    if (debug) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = const Color(0x88EF4444)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
+    }
 
     if (indeterminate) {
       _buildAndDrawPath(
@@ -121,6 +134,24 @@ class WigglyArcPainter extends CustomPainter {
     }
 
     canvas.drawPath(path, paint);
+
+    if (debug) {
+      for (final metric in path.computeMetrics()) {
+        for (var i = 0; i <= wiggleCount * 2; i++) {
+          final tangent = metric.getTangentForOffset(
+            metric.length * (i / (wiggleCount * 2)),
+          );
+          if (tangent == null) {
+            continue;
+          }
+          canvas.drawCircle(
+            tangent.position,
+            1.75,
+            Paint()..color = const Color(0xCCEF4444),
+          );
+        }
+      }
+    }
   }
 
   Shader? _buildProgressShader({
@@ -157,6 +188,7 @@ class WigglyArcPainter extends CustomPainter {
         oldDelegate.progressEndColor != progressEndColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.arcSpan != arcSpan ||
+        oldDelegate.debug != debug ||
         oldDelegate.trackStrokeCap != trackStrokeCap;
   }
 }

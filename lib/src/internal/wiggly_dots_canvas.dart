@@ -16,6 +16,7 @@ class WigglyDotsCanvas extends StatelessWidget {
     required this.progressColor,
     required this.progressEndColor,
     required this.trackColor,
+    required this.debug,
   });
 
   final double progress;
@@ -29,6 +30,7 @@ class WigglyDotsCanvas extends StatelessWidget {
   final Color progressColor;
   final Color? progressEndColor;
   final Color trackColor;
+  final bool debug;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +56,7 @@ class WigglyDotsCanvas extends StatelessWidget {
               progressColor: progressColor,
               progressEndColor: progressEndColor,
               trackColor: trackColor,
+              debug: debug,
             ),
           );
         },

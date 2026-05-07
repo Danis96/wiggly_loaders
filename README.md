@@ -22,6 +22,8 @@ Screenshots:
 - Same visual language across loader, progress bar, and refresh UI
 - Determinate and indeterminate modes
 - Optional color interpolation across arcs, bars, and dots
+- Optional `WigglyController` for external playback and progress control
+- Global `debugWigglyLoaders` overlay for tuning wave math visually
 - Pure Flutter `CustomPainter`, no third-party runtime deps
 - Tunable wave count, amplitude, colors, timing, and sizing
 - Example app included
@@ -43,7 +45,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.7.0
+  wiggly_loaders: ^0.8.0
 ```
 
 Import:
@@ -205,6 +207,36 @@ WigglyRefreshIndicator(
 )
 ```
 
+### WigglyController
+
+Use one controller per loader when you need app-driven playback:
+
+```dart
+final controller = WigglyController()
+  ..addStatusListener((status) {
+    if (status == WigglyControllerStatus.completed) {
+      debugPrint('loader done');
+    }
+  });
+
+WigglyLoader.indeterminate(
+  controller: controller,
+);
+
+controller.pause();
+controller.resume();
+controller.jumpTo(0.72);
+controller.clearProgress();
+```
+
+### debugWigglyLoaders
+
+Flip the global flag during integration to render guide lines and sample points:
+
+```dart
+debugWigglyLoaders = true;
+```
+
 ## Theme extension
 
 Set package-wide defaults through `ThemeData.extensions`:
@@ -264,6 +296,7 @@ flutter run -d ios
 | `willAnimate`      | `true`                  | Intro animation when widget appears                                |
 | `semanticsLabel`   | auto                    | Accessibility label                                                |
 | `semanticsValue`   | auto                    | Accessibility value                                                |
+| `controller`       | `null`                  | External handle for pause, resume, progress override, and status   |
 ### WigglyLoader only
 
 | Parameter          | Default                 | Description                                                        |
@@ -290,6 +323,7 @@ flutter run -d ios
 | `willAnimate`      | `true`                  | Intro animation when widget appears                                |
 | `semanticsLabel`   | auto                    | Accessibility label                                                |
 | `semanticsValue`   | auto                    | Accessibility value                                                |
+| `controller`       | `null`                  | External handle for pause, resume, progress override, and status   |
 | `onComplete`       | `null`                  | Callback fired after burst animation when `progress` reaches `1.0` |
 | `completeDuration` | `450ms`                 | Duration of the burst animation                                    |
 
@@ -309,6 +343,7 @@ flutter run -d ios
 | `willAnimate`      | `true`                  | Intro animation when widget appears                                |
 | `semanticsLabel`   | auto                    | Accessibility label                                                |
 | `semanticsValue`   | auto                    | Accessibility value                                                |
+| `controller`       | `null`                  | External handle for pause, resume, progress override, and status   |
 | `onComplete`       | `null`                  | Callback fired after burst animation when `progress` reaches `1.0` |
 | `completeDuration` | `450ms`                 | Duration of the burst animation                                    |
 

@@ -16,6 +16,7 @@ class WigglyLinearPainter extends CustomPainter {
     required this.trackColor,
     required this.segmentFraction,
     required this.borderRadius,
+    required this.debug,
   });
 
   final double progress;
@@ -30,6 +31,7 @@ class WigglyLinearPainter extends CustomPainter {
   final Color trackColor;
   final double segmentFraction;
   final double borderRadius;
+  final bool debug;
 
   static const int _segments = 300;
 
@@ -48,6 +50,16 @@ class WigglyLinearPainter extends CustomPainter {
       ),
       Paint()..color = trackColor,
     );
+
+    if (debug) {
+      canvas.drawLine(
+        Offset(0, cy),
+        Offset(size.width, cy),
+        Paint()
+          ..color = const Color(0x88EF4444)
+          ..strokeWidth = 1.0,
+      );
+    }
 
     if (indeterminate) {
       _drawIndeterminateSegment(canvas, size, cy);
@@ -160,6 +172,39 @@ class WigglyLinearPainter extends CustomPainter {
     }
 
     canvas.drawPath(path, paint);
+
+    if (debug) {
+      final guidePaint = Paint()
+        ..color = const Color(0xCCEF4444)
+        ..strokeWidth = 1.0;
+      canvas.drawLine(
+        Offset(startX, cy - height),
+        Offset(startX, cy + height),
+        guidePaint,
+      );
+      canvas.drawLine(
+        Offset(endX, cy - height),
+        Offset(endX, cy + height),
+        guidePaint,
+      );
+
+      for (final metric in path.computeMetrics()) {
+        for (var i = 0; i <= wiggleCount * 2; i++) {
+          final tangent = metric.getTangentForOffset(
+            metric.length * (i / (wiggleCount * 2)),
+          );
+          if (tangent == null) {
+            continue;
+          }
+          canvas.drawCircle(
+            tangent.position,
+            1.75,
+            Paint()..color = const Color(0xCCEF4444),
+          );
+        }
+      }
+    }
+
     canvas.restore();
   }
 
@@ -196,6 +241,7 @@ class WigglyLinearPainter extends CustomPainter {
         oldDelegate.progressEndColor != progressEndColor ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.segmentFraction != segmentFraction ||
-        oldDelegate.borderRadius != borderRadius;
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.debug != debug;
   }
 }
