@@ -45,7 +45,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wiggly_loaders: ^0.8.0
+  wiggly_loaders: ^0.9.0
 ```
 
 Import:
@@ -197,12 +197,25 @@ WigglyRefreshIndicator(
 // Custom
 WigglyRefreshIndicator(
   onRefresh: _handleRefresh,
+  onTrigger: () => HapticFeedback.mediumImpact(),
   progressColor: Colors.orange,
   progressEndColor: Colors.deepOrange,
   trackColor: Colors.orange.shade50,
   backgroundColor: Colors.white,
   size: 56,
   displacement: 64,
+  child: myScrollableWidget,
+)
+```
+
+If you want native-feeling pull confirmation on iOS, import `package:flutter/services.dart` and use `onTrigger` for haptics:
+
+```dart
+import 'package:flutter/services.dart';
+
+WigglyRefreshIndicator(
+  onRefresh: _handleRefresh,
+  onTrigger: HapticFeedback.mediumImpact,
   child: myScrollableWidget,
 )
 ```

@@ -40,6 +40,7 @@ class WigglyRefreshIndicator extends StatefulWidget {
     super.key,
     required this.onRefresh,
     required this.child,
+    this.onTrigger,
     this.displacement = 50.0,
     this.triggerDistance = 80.0,
     this.maxDragDistance = 120.0,
@@ -82,6 +83,12 @@ class WigglyRefreshIndicator extends StatefulWidget {
   /// Called when the user completes a pull-to-refresh gesture.
   /// The indicator keeps spinning until the returned [Future] resolves.
   final Future<void> Function() onRefresh;
+
+  /// Called once when the pull first crosses [triggerDistance].
+  ///
+  /// Useful for platform-specific feedback such as
+  /// `HapticFeedback.mediumImpact()` on iOS.
+  final VoidCallback? onTrigger;
 
   /// The scrollable widget to wrap.
   final Widget child;
@@ -163,6 +170,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
   bool _refreshing = false;
   bool _dragging = false;
   double _dragOffset = 0.0;
+  bool _didTrigger = false;
 
   @override
   void initState() {
@@ -261,11 +269,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
       final delta = -notification.overscroll;
       final newOffset =
           (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
-      setState(() {
-        _dragging = true;
-        _dragOffset = newOffset;
-        _dragProgress = (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
-      });
+      _updateDragState(newOffset);
       return false;
     }
 
@@ -275,17 +279,13 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
       if (delta > 0) {
         final newOffset =
             (_dragOffset + delta).clamp(0.0, widget.maxDragDistance);
-        setState(() {
-          _dragging = true;
-          _dragOffset = newOffset;
-          _dragProgress =
-              (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
-        });
+        _updateDragState(newOffset);
       }
     }
 
     if (notification is ScrollEndNotification) {
       if (_dragOffset >= widget.triggerDistance) {
+        _didTrigger = false;
         setState(() {
           _dragOffset = widget.displacement;
           _dragProgress = 1.0;
@@ -293,11 +293,7 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
         });
         _startRefresh();
       } else {
-        setState(() {
-          _dragging = false;
-          _dragOffset = 0.0;
-          _dragProgress = 0.0;
-        });
+        _resetDragState();
       }
     }
 
@@ -402,6 +398,33 @@ class _WigglyRefreshIndicatorState extends State<WigglyRefreshIndicator>
       return amplitude;
     }
     return amplitude * _reducedMotionAmplitudeScale;
+  }
+
+  void _updateDragState(double newOffset) {
+    final crossedTrigger =
+        !_didTrigger &&
+        _dragOffset < widget.triggerDistance &&
+        newOffset >= widget.triggerDistance;
+
+    setState(() {
+      _dragging = true;
+      _dragOffset = newOffset;
+      _dragProgress = (_dragOffset / widget.triggerDistance).clamp(0.0, 1.0);
+    });
+
+    if (crossedTrigger) {
+      _didTrigger = true;
+      widget.onTrigger?.call();
+    }
+  }
+
+  void _resetDragState() {
+    setState(() {
+      _dragging = false;
+      _dragOffset = 0.0;
+      _dragProgress = 0.0;
+    });
+    _didTrigger = false;
   }
 
   void _applyEffectiveDurations() {

@@ -1,3 +1,10 @@
+## 0.9.0
+
+* Add `onTrigger` to `WigglyRefreshIndicator`
+  * Fires once when the pull first crosses `triggerDistance`
+  * Lets callers plug in haptics such as `HapticFeedback.mediumImpact()` on iOS
+* Update README and test coverage for the new refresh hook
+
 ## 0.8.0
 
 * Add `WigglyController` for `WigglyLoader`, `WigglyLinearLoader`, and `WigglyDotsLoader`

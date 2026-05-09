@@ -1104,6 +1104,65 @@ void main() {
       );
       expect(indicator.progressEndColor, endColor);
     });
+
+    testWidgets('calls onTrigger once when pull crosses triggerDistance',
+        (tester) async {
+      var triggerCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WigglyRefreshIndicator(
+              onRefresh: () async {},
+              onTrigger: () => triggerCount++,
+              child: ListView.builder(
+                itemCount: 20,
+                itemBuilder: (_, index) => SizedBox(
+                  height: 80,
+                  child: Text('Item $index'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.drag(find.byType(ListView), const Offset(0, 140));
+      await tester.pump();
+
+      expect(triggerCount, 1);
+    });
+
+    testWidgets('resets onTrigger after a pull cycle ends', (tester) async {
+      var triggerCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: WigglyRefreshIndicator(
+              onRefresh: () async {},
+              onTrigger: () => triggerCount++,
+              child: ListView.builder(
+                itemCount: 20,
+                itemBuilder: (_, index) => SizedBox(
+                  height: 80,
+                  child: Text('Item $index'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.drag(find.byType(ListView), const Offset(0, 140));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      await tester.drag(find.byType(ListView), const Offset(0, 140));
+      await tester.pump();
+
+      expect(triggerCount, 2);
+    });
   });
 
   group('WigglySkeletonLoader', () {
